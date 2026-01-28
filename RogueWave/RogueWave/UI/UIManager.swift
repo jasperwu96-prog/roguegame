@@ -78,42 +78,43 @@ class UIManager {
 
         let screenWidth = scene.size.width
         let screenHeight = scene.size.height
-        let safeAreaTop: CGFloat = 50
+        // Increased safe area for Dynamic Island (iPhone 14 Pro and later)
+        let safeAreaTop: CGFloat = 70
 
-        // Health bar (top left)
+        // Health bar (top left, moved further down)
         healthBar = HealthBar(width: UIConfig.healthBarWidth, height: UIConfig.healthBarHeight)
-        healthBar.position = CGPoint(x: 20 + UIConfig.healthBarWidth / 2, y: screenHeight - safeAreaTop)
+        healthBar.position = CGPoint(x: 20 + UIConfig.healthBarWidth / 2, y: screenHeight - safeAreaTop - 10)
         hudLayer.addChild(healthBar)
 
         // XP bar (below health bar)
         xpBar = XPBar(width: UIConfig.xpBarWidth, height: UIConfig.xpBarHeight)
-        xpBar.position = CGPoint(x: 20 + UIConfig.xpBarWidth / 2, y: screenHeight - safeAreaTop - 30)
+        xpBar.position = CGPoint(x: 20 + UIConfig.xpBarWidth / 2, y: screenHeight - safeAreaTop - 40)
         hudLayer.addChild(xpBar)
 
         // Level label (next to XP bar)
         levelLabel = createLabel(text: "Lv.1", fontSize: UIConfig.smallFontSize)
-        levelLabel.position = CGPoint(x: 20 + UIConfig.xpBarWidth + 30, y: screenHeight - safeAreaTop - 30)
+        levelLabel.position = CGPoint(x: 20 + UIConfig.xpBarWidth + 30, y: screenHeight - safeAreaTop - 40)
         hudLayer.addChild(levelLabel)
 
-        // Wave label (top center)
+        // Wave label (top center, below Dynamic Island)
         waveLabel = createLabel(text: "Wave 1", fontSize: UIConfig.titleFontSize)
-        waveLabel.position = CGPoint(x: screenWidth / 2, y: screenHeight - safeAreaTop)
+        waveLabel.position = CGPoint(x: screenWidth / 2, y: screenHeight - safeAreaTop - 10)
         hudLayer.addChild(waveLabel)
 
         // Timer label (below wave)
         timerLabel = createLabel(text: "0:30", fontSize: UIConfig.bodyFontSize)
-        timerLabel.position = CGPoint(x: screenWidth / 2, y: screenHeight - safeAreaTop - 35)
+        timerLabel.position = CGPoint(x: screenWidth / 2, y: screenHeight - safeAreaTop - 45)
         hudLayer.addChild(timerLabel)
 
         // Kill count (top right)
         killCountLabel = createLabel(text: "Kills: 0", fontSize: UIConfig.bodyFontSize)
         killCountLabel.horizontalAlignmentMode = .right
-        killCountLabel.position = CGPoint(x: screenWidth - 20, y: screenHeight - safeAreaTop)
+        killCountLabel.position = CGPoint(x: screenWidth - 20, y: screenHeight - safeAreaTop - 10)
         hudLayer.addChild(killCountLabel)
 
         // Pause button (top right corner)
         let pauseButton = createButton(text: "II", size: CGSize(width: 44, height: 44))
-        pauseButton.position = CGPoint(x: screenWidth - 40, y: screenHeight - safeAreaTop - 50)
+        pauseButton.position = CGPoint(x: screenWidth - 40, y: screenHeight - safeAreaTop - 55)
         pauseButton.name = "pauseButton"
         hudLayer.addChild(pauseButton)
     }

@@ -123,9 +123,9 @@ class WaveManager {
 
         // Update wave timer
         waveTimer -= deltaTime
-        delegate?.waveTimerUpdated(timeRemaining: max(0, waveTimer))
+        delegate?.waveTimerUpdated(timeRemaining: Swift.max(0, waveTimer))
 
-        // Spawn enemies
+        // Spawn enemies continuously while wave is active
         if !enemiesToSpawn.isEmpty && currentEnemyCount < EnemyConfig.maxEnemiesOnScreen {
             spawnTimer += deltaTime
 
@@ -136,7 +136,7 @@ class WaveManager {
         }
 
         // Check wave completion conditions
-        checkWaveCompletion()
+        checkWaveCompletion(currentEnemyCount: currentEnemyCount)
     }
 
     // MARK: - Wave Generation
@@ -293,23 +293,35 @@ class WaveManager {
 
     func enemyWasKilled() {
         enemiesKilled += 1
-        checkWaveCompletion()
     }
 
-    private func checkWaveCompletion() {
-        // Wave ends when all enemies are killed OR time runs out
+    private func checkWaveCompletion(currentEnemyCount: Int) {
         let allEnemiesSpawned = enemiesToSpawn.isEmpty
-        let allEnemiesKilled = enemiesKilled >= totalEnemiesInWave
+        let allEnemiesKilled = enemiesKilled >= enemiesSpawned && enemiesSpawned > 0
 
-        if allEnemiesSpawned && allEnemiesKilled {
-            delegate?.allEnemiesDefeated()
+        // Wave ends when:
+        // 1. All enemies have been spawned AND all are killed, OR
+        // 2. Timer runs out AND all current enemies on screen are dead
+        if allEnemiesSpawned && allEnemiesKilled && currentEnemyCount == 0 {
+            endWaveAndNotify()
+            return
         }
 
-        // Time-based completion (enemies stop spawning, but wave continues until killed)
-        if waveTimer <= 0 && !enemiesToSpawn.isEmpty {
-            // Clear remaining spawn queue when time runs out
+        // Timer ran out - stop spawning new enemies, wait for current to be killed
+        if waveTimer <= 0 {
             enemiesToSpawn.removeAll()
+
+            // If no enemies left on screen, wave is complete
+            if currentEnemyCount == 0 {
+                endWaveAndNotify()
+            }
         }
+    }
+
+    private func endWaveAndNotify() {
+        guard isWaveActive else { return }
+        isWaveActive = false
+        delegate?.allEnemiesDefeated()
     }
 
     // MARK: - Spawn Position Generation

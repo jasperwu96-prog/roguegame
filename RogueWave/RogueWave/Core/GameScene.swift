@@ -94,30 +94,163 @@ class GameScene: SKScene {
     }
 
     private func createBackgroundGrid() {
-        let gridSpacing: CGFloat = 50
-        let lineAlpha: CGFloat = 0.1
+        // Create a dungeon/arena style background
 
-        // Vertical lines
-        var x: CGFloat = 0
-        while x <= size.width {
-            let line = SKShapeNode(rectOf: CGSize(width: 1, height: size.height))
-            line.fillColor = SKColor.white.withAlphaComponent(lineAlpha)
-            line.strokeColor = .clear
-            line.position = CGPoint(x: x, y: size.height / 2)
-            backgroundLayer.addChild(line)
-            x += gridSpacing
+        // Dark stone floor base
+        let floorBase = SKShapeNode(rectOf: CGSize(width: size.width, height: size.height))
+        floorBase.fillColor = SKColor(red: 0.12, green: 0.1, blue: 0.15, alpha: 1.0)
+        floorBase.strokeColor = .clear
+        floorBase.position = CGPoint(x: size.width / 2, y: size.height / 2)
+        backgroundLayer.addChild(floorBase)
+
+        // Stone tile pattern
+        let tileSize: CGFloat = 60
+        let tileColors = [
+            SKColor(red: 0.15, green: 0.12, blue: 0.18, alpha: 1.0),
+            SKColor(red: 0.13, green: 0.11, blue: 0.16, alpha: 1.0),
+            SKColor(red: 0.14, green: 0.12, blue: 0.17, alpha: 1.0)
+        ]
+
+        var tileX: CGFloat = tileSize / 2
+        var row = 0
+        while tileX < size.width + tileSize {
+            var tileY: CGFloat = tileSize / 2
+            while tileY < size.height + tileSize {
+                let tile = SKShapeNode(rectOf: CGSize(width: tileSize - 2, height: tileSize - 2), cornerRadius: 3)
+                tile.fillColor = tileColors[(row + Int(tileY / tileSize)) % tileColors.count]
+                tile.strokeColor = SKColor(red: 0.08, green: 0.06, blue: 0.1, alpha: 0.8)
+                tile.lineWidth = 1
+                tile.position = CGPoint(x: tileX, y: tileY)
+                backgroundLayer.addChild(tile)
+
+                // Random cracks/details on some tiles
+                if Int.random(in: 0...5) == 0 {
+                    let crack = SKShapeNode(rectOf: CGSize(width: CGFloat.random(in: 10...25), height: 1))
+                    crack.fillColor = SKColor(red: 0.08, green: 0.06, blue: 0.1, alpha: 0.5)
+                    crack.strokeColor = .clear
+                    crack.zRotation = CGFloat.random(in: -.pi/4 ... .pi/4)
+                    crack.position = CGPoint(
+                        x: CGFloat.random(in: -tileSize/4 ... tileSize/4),
+                        y: CGFloat.random(in: -tileSize/4 ... tileSize/4)
+                    )
+                    tile.addChild(crack)
+                }
+
+                tileY += tileSize
+            }
+            tileX += tileSize
+            row += 1
         }
 
-        // Horizontal lines
-        var y: CGFloat = 0
-        while y <= size.height {
-            let line = SKShapeNode(rectOf: CGSize(width: size.width, height: 1))
-            line.fillColor = SKColor.white.withAlphaComponent(lineAlpha)
-            line.strokeColor = .clear
-            line.position = CGPoint(x: size.width / 2, y: y)
-            backgroundLayer.addChild(line)
-            y += gridSpacing
+        // Arena border/walls
+        let borderWidth: CGFloat = 15
+        let borderColor = SKColor(red: 0.25, green: 0.2, blue: 0.15, alpha: 1.0)
+        let borderHighlight = SKColor(red: 0.35, green: 0.28, blue: 0.2, alpha: 1.0)
+
+        // Top border
+        let topBorder = SKShapeNode(rectOf: CGSize(width: size.width, height: borderWidth))
+        topBorder.fillColor = borderColor
+        topBorder.strokeColor = borderHighlight
+        topBorder.lineWidth = 2
+        topBorder.position = CGPoint(x: size.width / 2, y: size.height - borderWidth / 2)
+        backgroundLayer.addChild(topBorder)
+
+        // Bottom border
+        let bottomBorder = SKShapeNode(rectOf: CGSize(width: size.width, height: borderWidth))
+        bottomBorder.fillColor = borderColor
+        bottomBorder.strokeColor = borderHighlight
+        bottomBorder.lineWidth = 2
+        bottomBorder.position = CGPoint(x: size.width / 2, y: borderWidth / 2)
+        backgroundLayer.addChild(bottomBorder)
+
+        // Left border
+        let leftBorder = SKShapeNode(rectOf: CGSize(width: borderWidth, height: size.height))
+        leftBorder.fillColor = borderColor
+        leftBorder.strokeColor = borderHighlight
+        leftBorder.lineWidth = 2
+        leftBorder.position = CGPoint(x: borderWidth / 2, y: size.height / 2)
+        backgroundLayer.addChild(leftBorder)
+
+        // Right border
+        let rightBorder = SKShapeNode(rectOf: CGSize(width: borderWidth, height: size.height))
+        rightBorder.fillColor = borderColor
+        rightBorder.strokeColor = borderHighlight
+        rightBorder.lineWidth = 2
+        rightBorder.position = CGPoint(x: size.width - borderWidth / 2, y: size.height / 2)
+        backgroundLayer.addChild(rightBorder)
+
+        // Corner decorations (torch holders)
+        let cornerPositions = [
+            CGPoint(x: 40, y: size.height - 100),
+            CGPoint(x: size.width - 40, y: size.height - 100),
+            CGPoint(x: 40, y: 100),
+            CGPoint(x: size.width - 40, y: 100)
+        ]
+
+        for pos in cornerPositions {
+            // Torch base
+            let torchBase = SKShapeNode(rectOf: CGSize(width: 20, height: 30), cornerRadius: 3)
+            torchBase.fillColor = SKColor(red: 0.3, green: 0.25, blue: 0.15, alpha: 1.0)
+            torchBase.strokeColor = SKColor(red: 0.4, green: 0.35, blue: 0.25, alpha: 1.0)
+            torchBase.lineWidth = 2
+            torchBase.position = pos
+            backgroundLayer.addChild(torchBase)
+
+            // Torch flame glow
+            let glow = SKShapeNode(circleOfRadius: 25)
+            glow.fillColor = SKColor(red: 1.0, green: 0.6, blue: 0.2, alpha: 0.15)
+            glow.strokeColor = .clear
+            glow.position = CGPoint(x: pos.x, y: pos.y + 25)
+            backgroundLayer.addChild(glow)
+
+            // Flame
+            let flamePath = CGMutablePath()
+            flamePath.move(to: CGPoint(x: -8, y: 0))
+            flamePath.addQuadCurve(to: CGPoint(x: 0, y: 25), control: CGPoint(x: -10, y: 15))
+            flamePath.addQuadCurve(to: CGPoint(x: 8, y: 0), control: CGPoint(x: 10, y: 15))
+            flamePath.closeSubpath()
+
+            let flame = SKShapeNode(path: flamePath)
+            flame.fillColor = SKColor(red: 1.0, green: 0.5, blue: 0.1, alpha: 0.9)
+            flame.strokeColor = SKColor(red: 1.0, green: 0.8, blue: 0.3, alpha: 1.0)
+            flame.lineWidth = 1
+            flame.glowWidth = 5
+            flame.position = CGPoint(x: pos.x, y: pos.y + 15)
+            backgroundLayer.addChild(flame)
+
+            // Animate flame flicker
+            let flicker = SKAction.sequence([
+                SKAction.scaleX(to: 1.1, duration: 0.2),
+                SKAction.scaleX(to: 0.9, duration: 0.15),
+                SKAction.scaleX(to: 1.0, duration: 0.1)
+            ])
+            flame.run(SKAction.repeatForever(flicker))
         }
+
+        // Center arena circle decoration
+        let centerCircle = SKShapeNode(circleOfRadius: 80)
+        centerCircle.fillColor = .clear
+        centerCircle.strokeColor = SKColor(red: 0.2, green: 0.18, blue: 0.15, alpha: 0.5)
+        centerCircle.lineWidth = 3
+        centerCircle.position = CGPoint(x: size.width / 2, y: size.height / 2)
+        backgroundLayer.addChild(centerCircle)
+
+        let innerCircle = SKShapeNode(circleOfRadius: 60)
+        innerCircle.fillColor = .clear
+        innerCircle.strokeColor = SKColor(red: 0.25, green: 0.2, blue: 0.15, alpha: 0.4)
+        innerCircle.lineWidth = 2
+        innerCircle.position = CGPoint(x: size.width / 2, y: size.height / 2)
+        backgroundLayer.addChild(innerCircle)
+
+        // Subtle vignette effect (darker corners)
+        let vignetteSize = Swift.max(size.width, size.height) * 1.5
+        let vignette = SKShapeNode(circleOfRadius: vignetteSize / 2)
+        vignette.fillColor = .clear
+        vignette.strokeColor = SKColor(red: 0, green: 0, blue: 0, alpha: 0.4)
+        vignette.lineWidth = vignetteSize * 0.3
+        vignette.position = CGPoint(x: size.width / 2, y: size.height / 2)
+        vignette.zPosition = GameConfig.ZPosition.background + 0.5
+        backgroundLayer.addChild(vignette)
     }
 
     private func setupPlayer() {

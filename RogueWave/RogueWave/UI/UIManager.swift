@@ -78,8 +78,9 @@ class UIManager {
 
         let screenWidth = scene.size.width
         let screenHeight = scene.size.height
-        // Increased safe area for Dynamic Island (iPhone 14 Pro and later)
-        let safeAreaTop: CGFloat = 70
+        // Large safe area for Dynamic Island (iPhone 14 Pro and later have ~59pt island)
+        // Using 100 to ensure nothing is covered
+        let safeAreaTop: CGFloat = 100
 
         // Health bar (top left, moved further down)
         healthBar = HealthBar(width: UIConfig.healthBarWidth, height: UIConfig.healthBarHeight)

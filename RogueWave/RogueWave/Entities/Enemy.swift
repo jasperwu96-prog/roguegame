@@ -211,8 +211,10 @@ class Enemy: SKNode {
         body.allowsRotation = false
         body.categoryBitMask = GameConfig.PhysicsCategory.enemy
         body.contactTestBitMask = GameConfig.PhysicsCategory.player | GameConfig.PhysicsCategory.playerProjectile
-        body.collisionBitMask = GameConfig.PhysicsCategory.boundary | GameConfig.PhysicsCategory.enemy
-        body.linearDamping = 3.0
+        // Don't collide with boundary - enemies spawn outside and need to enter
+        // Don't collide with other enemies - prevents clumping/blocking
+        body.collisionBitMask = GameConfig.PhysicsCategory.none
+        body.linearDamping = 1.0  // Reduced damping for smoother movement
         body.mass = isBoss ? 10 : (isElite ? 3 : 1)
         physicsBody = body
     }

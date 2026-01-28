@@ -274,7 +274,7 @@ class WaveManager {
         for modifier in activeModifiers {
             switch modifier {
             case .speedBoost:
-                enemy.speed *= modifier.multiplier
+                enemy.moveSpeed *= modifier.multiplier
             case .healthBoost:
                 enemy.maxHealth *= modifier.multiplier
                 enemy.currentHealth = enemy.maxHealth

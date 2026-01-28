@@ -237,7 +237,7 @@ class PooledProjectile: SKNode, Poolable {
 
     private var spriteNode: SKShapeNode!
     var damage: CGFloat = 0
-    var speed: CGFloat = 0
+    var moveSpeed: CGFloat = 0
     var isPlayerProjectile: Bool = true
     var piercing: Bool = false
     var homing: Bool = false
@@ -275,7 +275,7 @@ class PooledProjectile: SKNode, Poolable {
     func configure(damage: CGFloat, speed: CGFloat, angle: CGFloat,
                    isPlayerProjectile: Bool, piercing: Bool, homing: Bool, isCritical: Bool) {
         self.damage = damage
-        self.speed = speed
+        self.moveSpeed = speed
         self.isPlayerProjectile = isPlayerProjectile
         self.piercing = piercing
         self.homing = homing
@@ -297,8 +297,8 @@ class PooledProjectile: SKNode, Poolable {
         }
 
         // Apply velocity
-        let vx = cos(angle) * speed
-        let vy = sin(angle) * speed
+        let vx = cos(angle) * moveSpeed
+        let vy = sin(angle) * moveSpeed
         physicsBody?.velocity = CGVector(dx: vx, dy: vy)
     }
 
@@ -328,7 +328,7 @@ class PooledEnemy: SKNode, Poolable {
     private var spriteNode: SKShapeNode!
     var maxHealth: CGFloat = 0
     var currentHealth: CGFloat = 0
-    var speed: CGFloat = 0
+    var moveSpeed: CGFloat = 0
     var damage: CGFloat = 0
     var isDead: Bool = false
     var isActive: Bool = false
@@ -366,7 +366,7 @@ class PooledEnemy: SKNode, Poolable {
     func configure(health: CGFloat, speed: CGFloat, damage: CGFloat, color: SKColor) {
         self.maxHealth = health
         self.currentHealth = health
-        self.speed = speed
+        self.moveSpeed = speed
         self.damage = damage
         self.isDead = false
         self.isActive = true

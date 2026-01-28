@@ -33,7 +33,7 @@ class Enemy: SKNode {
     var enemyType: EnemyType
     var maxHealth: CGFloat
     var currentHealth: CGFloat
-    var speed: CGFloat
+    var moveSpeed: CGFloat
     var damage: CGFloat
     var xpValue: Int
     var isElite: Bool = false
@@ -121,7 +121,7 @@ class Enemy: SKNode {
         // Apply wave scaling
         let waveMultiplier = CGFloat(waveNumber - 1)
         self.maxHealth = baseHealth * pow(EnemyConfig.healthScalingPerWave, waveMultiplier)
-        self.speed = baseSpeed * pow(EnemyConfig.speedScalingPerWave, waveMultiplier)
+        self.moveSpeed = baseSpeed * pow(EnemyConfig.speedScalingPerWave, waveMultiplier)
         self.damage = baseDamage * pow(EnemyConfig.damageScalingPerWave, waveMultiplier)
         self.xpValue = baseXP
 
@@ -304,7 +304,7 @@ class Enemy: SKNode {
     private func updateChaserBehavior(target: Player) {
         // Move toward player
         let direction = directionTo(target)
-        physicsBody?.velocity = CGVector(dx: direction.x * speed, dy: direction.y * speed)
+        physicsBody?.velocity = CGVector(dx: direction.x * moveSpeed, dy: direction.y * moveSpeed)
 
         // Rotate to face player
         let angle = atan2(direction.y, direction.x) - .pi / 2
@@ -317,7 +317,7 @@ class Enemy: SKNode {
         if distanceToTarget > attackRange {
             // Move closer
             let direction = directionTo(target)
-            physicsBody?.velocity = CGVector(dx: direction.x * speed, dy: direction.y * speed)
+            physicsBody?.velocity = CGVector(dx: direction.x * moveSpeed, dy: direction.y * moveSpeed)
         } else {
             // Stop and shoot
             physicsBody?.velocity = .zero

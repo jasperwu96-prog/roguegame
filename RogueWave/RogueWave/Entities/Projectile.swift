@@ -16,7 +16,7 @@ class Projectile: SKNode {
     private var spriteNode: SKShapeNode!
 
     let damage: CGFloat
-    let speed: CGFloat
+    let moveSpeed: CGFloat
     let angle: CGFloat
     let isPlayerProjectile: Bool
     let piercing: Bool
@@ -40,7 +40,7 @@ class Projectile: SKNode {
          piercing: Bool = false, homing: Bool = false, isCritical: Bool = false) {
 
         self.damage = damage
-        self.speed = speed
+        self.moveSpeed = speed
         self.angle = angle
         self.isPlayerProjectile = isPlayerProjectile
         self.piercing = piercing
@@ -153,8 +153,8 @@ class Projectile: SKNode {
     }
 
     private func applyInitialVelocity() {
-        let vx = cos(angle) * speed
-        let vy = sin(angle) * speed
+        let vx = cos(angle) * moveSpeed
+        let vy = sin(angle) * moveSpeed
         physicsBody?.velocity = CGVector(dx: vx, dy: vy)
 
         // Rotate sprite to face direction
@@ -206,8 +206,8 @@ class Projectile: SKNode {
         let newAngle = currentAngle + angleDiff * 0.1  // Adjust turning speed
 
         // Apply new velocity
-        let newVx = cos(newAngle) * speed
-        let newVy = sin(newAngle) * speed
+        let newVx = cos(newAngle) * moveSpeed
+        let newVy = sin(newAngle) * moveSpeed
         physicsBody?.velocity = CGVector(dx: newVx, dy: newVy)
 
         // Update sprite rotation

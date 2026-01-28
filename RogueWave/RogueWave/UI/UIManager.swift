@@ -147,11 +147,11 @@ class UIManager {
     // MARK: - HUD Updates
 
     func updateHealth(current: CGFloat, max: CGFloat) {
-        healthBar.update(current: current, max: max)
+        healthBar.update(current: current, maxValue: max)
     }
 
     func updateXP(current: Int, max: Int, level: Int) {
-        xpBar.update(current: current, max: max)
+        xpBar.update(current: current, maxValue: max)
         levelLabel.text = "Lv.\(level)"
     }
 
@@ -404,12 +404,12 @@ class HealthBar: SKNode {
         addChild(label)
     }
 
-    func update(current: CGFloat, max: CGFloat) {
-        let percent = max > 0 ? current / max : 0
+    func update(current: CGFloat, maxValue: CGFloat) {
+        let percent = maxValue > 0 ? current / maxValue : 0
         foreground.xScale = max(0.01, percent)
         foreground.position.x = -width / 2 * (1 - percent)
 
-        label.text = "\(Int(current))/\(Int(max))"
+        label.text = "\(Int(current))/\(Int(maxValue))"
 
         // Color change based on health
         if percent <= 0.25 {
@@ -455,9 +455,9 @@ class XPBar: SKNode {
         addChild(foreground)
     }
 
-    func update(current: Int, max: Int) {
-        let percent = max > 0 ? CGFloat(current) / CGFloat(max) : 0
-        foreground.xScale = max(0.01, percent)
+    func update(current: Int, maxValue: Int) {
+        let percent = maxValue > 0 ? CGFloat(current) / CGFloat(maxValue) : 0
+        foreground.xScale = Swift.max(0.01, percent)
         foreground.position.x = -width / 2 * (1 - percent)
     }
 }

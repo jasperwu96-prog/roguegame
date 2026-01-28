@@ -1,0 +1,281 @@
+//
+//  Projectile.swift
+//  RogueWave
+//
+//  Projectile entity for player and enemy attacks
+//
+
+import SpriteKit
+
+// MARK: - Projectile Class
+
+class Projectile: SKNode {
+
+    // MARK: - Properties
+
+    private var spriteNode: SKShapeNode!
+
+    let damage: CGFloat
+    let speed: CGFloat
+    let angle: CGFloat
+    let isPlayerProjectile: Bool
+    let piercing: Bool
+    let homing: Bool
+    let isCritical: Bool
+
+    var isActive: Bool = true
+    var hitCount: Int = 0
+    let maxHits: Int = 3  // For piercing projectiles
+
+    // Homing properties
+    weak var homingTarget: Enemy?
+    let homingStrength: CGFloat = 5.0
+
+    // Lifetime
+    var lifetime: TimeInterval = 3.0
+
+    // MARK: - Initialization
+
+    init(damage: CGFloat, speed: CGFloat, angle: CGFloat, isPlayerProjectile: Bool,
+         piercing: Bool = false, homing: Bool = false, isCritical: Bool = false) {
+
+        self.damage = damage
+        self.speed = speed
+        self.angle = angle
+        self.isPlayerProjectile = isPlayerProjectile
+        self.piercing = piercing
+        self.homing = homing
+        self.isCritical = isCritical
+
+        super.init()
+
+        setupVisuals()
+        setupPhysics()
+        applyInitialVelocity()
+    }
+
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    // MARK: - Setup
+
+    private func setupVisuals() {
+        // Create projectile shape based on type
+        if isPlayerProjectile {
+            // Player projectile - glowing circle
+            spriteNode = SKShapeNode(circleOfRadius: isCritical ? 8 : 6)
+            spriteNode.fillColor = isCritical ?
+                SKColor(red: 1.0, green: 0.9, blue: 0.3, alpha: 1.0) :
+                SKColor(red: 0.3, green: 0.8, blue: 1.0, alpha: 1.0)
+            spriteNode.strokeColor = SKColor.white
+            spriteNode.lineWidth = 1
+            spriteNode.glowWidth = isCritical ? 8 : 4
+        } else {
+            // Enemy projectile - red diamond
+            let size: CGFloat = 10
+            let path = CGMutablePath()
+            path.move(to: CGPoint(x: 0, y: size / 2))
+            path.addLine(to: CGPoint(x: size / 2, y: 0))
+            path.addLine(to: CGPoint(x: 0, y: -size / 2))
+            path.addLine(to: CGPoint(x: -size / 2, y: 0))
+            path.closeSubpath()
+
+            spriteNode = SKShapeNode(path: path)
+            spriteNode.fillColor = SKColor(red: 1.0, green: 0.3, blue: 0.3, alpha: 1.0)
+            spriteNode.strokeColor = SKColor.white.withAlphaComponent(0.5)
+            spriteNode.lineWidth = 1
+            spriteNode.glowWidth = 3
+        }
+
+        addChild(spriteNode)
+
+        // Add trail effect
+        addTrailEffect()
+
+        zPosition = GameConfig.ZPosition.projectile
+    }
+
+    private func addTrailEffect() {
+        // Create a fading trail behind the projectile
+        let trailAction = SKAction.repeatForever(
+            SKAction.sequence([
+                SKAction.run { [weak self] in
+                    self?.spawnTrailParticle()
+                },
+                SKAction.wait(forDuration: 0.02)
+            ])
+        )
+        run(trailAction, withKey: "trail")
+    }
+
+    private func spawnTrailParticle() {
+        guard let parentNode = parent else { return }
+
+        let trail = SKShapeNode(circleOfRadius: isPlayerProjectile ? 3 : 2)
+        trail.fillColor = spriteNode.fillColor.withAlphaComponent(0.5)
+        trail.strokeColor = .clear
+        trail.position = position
+        trail.zPosition = zPosition - 1
+
+        parentNode.addChild(trail)
+
+        let fadeAction = SKAction.sequence([
+            SKAction.group([
+                SKAction.fadeOut(withDuration: 0.15),
+                SKAction.scale(to: 0.3, duration: 0.15)
+            ]),
+            SKAction.removeFromParent()
+        ])
+        trail.run(fadeAction)
+    }
+
+    private func setupPhysics() {
+        let radius: CGFloat = isPlayerProjectile ? 6 : 5
+
+        let body = SKPhysicsBody(circleOfRadius: radius)
+        body.isDynamic = true
+        body.affectedByGravity = false
+        body.allowsRotation = false
+
+        if isPlayerProjectile {
+            body.categoryBitMask = GameConfig.PhysicsCategory.playerProjectile
+            body.contactTestBitMask = GameConfig.PhysicsCategory.enemy
+            body.collisionBitMask = GameConfig.PhysicsCategory.none
+        } else {
+            body.categoryBitMask = GameConfig.PhysicsCategory.enemyProjectile
+            body.contactTestBitMask = GameConfig.PhysicsCategory.player
+            body.collisionBitMask = GameConfig.PhysicsCategory.none
+        }
+
+        body.linearDamping = 0
+        physicsBody = body
+    }
+
+    private func applyInitialVelocity() {
+        let vx = cos(angle) * speed
+        let vy = sin(angle) * speed
+        physicsBody?.velocity = CGVector(dx: vx, dy: vy)
+
+        // Rotate sprite to face direction
+        spriteNode.zRotation = angle - .pi / 2
+    }
+
+    // MARK: - Update
+
+    func update(deltaTime: TimeInterval, enemies: [Enemy]? = nil) {
+        guard isActive else { return }
+
+        // Update lifetime
+        lifetime -= deltaTime
+        if lifetime <= 0 {
+            deactivate()
+            return
+        }
+
+        // Homing behavior
+        if homing && isPlayerProjectile, let enemies = enemies {
+            updateHoming(enemies: enemies)
+        }
+    }
+
+    private func updateHoming(enemies: [Enemy]) {
+        // Find nearest enemy if no target or target is dead
+        if homingTarget == nil || homingTarget?.isDead == true {
+            homingTarget = findNearestEnemy(enemies: enemies)
+        }
+
+        guard let target = homingTarget else { return }
+
+        // Calculate angle to target
+        let dx = target.position.x - position.x
+        let dy = target.position.y - position.y
+        let targetAngle = atan2(dy, dx)
+
+        // Current velocity angle
+        guard let velocity = physicsBody?.velocity else { return }
+        let currentAngle = atan2(velocity.dy, velocity.dx)
+
+        // Smoothly adjust angle toward target
+        var angleDiff = targetAngle - currentAngle
+
+        // Normalize angle difference
+        while angleDiff > .pi { angleDiff -= .pi * 2 }
+        while angleDiff < -.pi { angleDiff += .pi * 2 }
+
+        let newAngle = currentAngle + angleDiff * 0.1  // Adjust turning speed
+
+        // Apply new velocity
+        let newVx = cos(newAngle) * speed
+        let newVy = sin(newAngle) * speed
+        physicsBody?.velocity = CGVector(dx: newVx, dy: newVy)
+
+        // Update sprite rotation
+        spriteNode.zRotation = newAngle - .pi / 2
+    }
+
+    private func findNearestEnemy(enemies: [Enemy]) -> Enemy? {
+        var nearestEnemy: Enemy?
+        var nearestDistance: CGFloat = .greatestFiniteMagnitude
+
+        for enemy in enemies {
+            guard !enemy.isDead else { continue }
+
+            let dx = enemy.position.x - position.x
+            let dy = enemy.position.y - position.y
+            let distance = sqrt(dx * dx + dy * dy)
+
+            if distance < nearestDistance {
+                nearestDistance = distance
+                nearestEnemy = enemy
+            }
+        }
+
+        return nearestEnemy
+    }
+
+    // MARK: - Hit Detection
+
+    func onHit() {
+        hitCount += 1
+
+        if !piercing || hitCount >= maxHits {
+            deactivate()
+        } else {
+            // Visual feedback for pierce
+            let scaleAction = SKAction.sequence([
+                SKAction.scale(to: 1.3, duration: 0.05),
+                SKAction.scale(to: 1.0, duration: 0.05)
+            ])
+            spriteNode.run(scaleAction)
+        }
+    }
+
+    // MARK: - Deactivation
+
+    func deactivate() {
+        guard isActive else { return }
+
+        isActive = false
+        removeAction(forKey: "trail")
+        physicsBody?.categoryBitMask = GameConfig.PhysicsCategory.none
+
+        // Impact effect
+        let impactAction = SKAction.sequence([
+            SKAction.group([
+                SKAction.scale(to: 1.5, duration: 0.1),
+                SKAction.fadeOut(withDuration: 0.1)
+            ]),
+            SKAction.removeFromParent()
+        ])
+        run(impactAction)
+    }
+
+    // MARK: - Bounds Checking
+
+    func isOutOfBounds(bounds: CGRect) -> Bool {
+        let padding: CGFloat = 50
+        let expandedBounds = bounds.insetBy(dx: -padding, dy: -padding)
+        return !expandedBounds.contains(position)
+    }
+}

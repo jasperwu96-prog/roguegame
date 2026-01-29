@@ -1344,10 +1344,13 @@ class Enemy: SKNode {
     }
 
     private func spawnDeathParticles() {
-        let particleCount = isElite ? 8 : (isBoss ? 16 : 4)
+        // Minimal particles to reduce node count - only for bosses/elites
+        guard isElite || isBoss else { return }
+
+        let particleCount = isBoss ? 4 : 2
 
         for _ in 0..<particleCount {
-            let particle = SKShapeNode(circleOfRadius: CGFloat.random(in: 3...8))
+            let particle = SKShapeNode(circleOfRadius: 4)
             particle.fillColor = spriteNode.fillColor
             particle.strokeColor = .clear
             particle.position = position
@@ -1356,13 +1359,13 @@ class Enemy: SKNode {
             parent?.addChild(particle)
 
             let angle = CGFloat.random(in: 0...(.pi * 2))
-            let distance = CGFloat.random(in: 30...60)
+            let distance: CGFloat = 40
             let dx = cos(angle) * distance
             let dy = sin(angle) * distance
 
-            let moveAction = SKAction.moveBy(x: dx, y: dy, duration: 0.3)
+            let moveAction = SKAction.moveBy(x: dx, y: dy, duration: 0.2)
             moveAction.timingMode = .easeOut
-            let fadeAction = SKAction.fadeOut(withDuration: 0.3)
+            let fadeAction = SKAction.fadeOut(withDuration: 0.2)
             let removeAction = SKAction.removeFromParent()
 
             particle.run(SKAction.sequence([SKAction.group([moveAction, fadeAction]), removeAction]))

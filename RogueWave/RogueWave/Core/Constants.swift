@@ -69,8 +69,8 @@ enum PlayerConfig {
 enum EnemyConfig {
     // Spawn settings - Fast action!
     static let spawnPadding: CGFloat = 30  // Distance outside spawn bounds
-    static let maxEnemiesOnScreen: Int = 80  // More enemies on screen
-    static let spawnInterval: TimeInterval = 0.15  // Very fast spawning
+    static let maxEnemiesOnScreen: Int = 25  // Reduced to prevent performance issues
+    static let spawnInterval: TimeInterval = 0.3  // Slower spawning for stability
 
     // Base scaling per wave
     static let healthScalingPerWave: CGFloat = 1.15

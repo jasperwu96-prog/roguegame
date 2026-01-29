@@ -97,19 +97,9 @@ class Projectile: SKNode {
     }
 
     private func addTrailEffect() {
-        // Only add trail effects to player projectiles to reduce particle count
-        guard isPlayerProjectile else { return }
-
-        // Create a fading trail behind the projectile (reduced frequency)
-        let trailAction = SKAction.repeatForever(
-            SKAction.sequence([
-                SKAction.run { [weak self] in
-                    self?.spawnTrailParticle()
-                },
-                SKAction.wait(forDuration: 0.06)  // Reduced from 0.02 to 0.06 (3x less particles)
-            ])
-        )
-        run(trailAction, withKey: "trail")
+        // DISABLED: Trail effects cause too many nodes and performance issues
+        // Only critical projectiles get trails now (none currently)
+        return
     }
 
     private func spawnTrailParticle() {

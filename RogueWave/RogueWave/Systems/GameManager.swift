@@ -367,32 +367,3 @@ class GameManager {
         ]
     }
 }
-
-// MARK: - Achievement Definitions
-
-struct Achievement {
-    let id: String
-    let name: String
-    let description: String
-    let icon: String
-
-    static let allAchievements: [Achievement] = [
-        Achievement(id: "first_run", name: "First Steps", description: "Complete your first run", icon: "flag"),
-        Achievement(id: "kill_100", name: "Monster Hunter", description: "Kill 100 enemies total", icon: "skull"),
-        Achievement(id: "kill_1000", name: "Slayer", description: "Kill 1000 enemies total", icon: "skull.fill"),
-        Achievement(id: "kill_10000", name: "Exterminator", description: "Kill 10000 enemies total", icon: "flame"),
-        Achievement(id: "wave_5", name: "Survivor", description: "Reach wave 5", icon: "5.circle"),
-        Achievement(id: "wave_10", name: "Veteran", description: "Reach wave 10", icon: "10.circle"),
-        Achievement(id: "wave_20", name: "Champion", description: "Reach wave 20", icon: "star"),
-        Achievement(id: "wave_50", name: "Legend", description: "Reach wave 50", icon: "crown"),
-        Achievement(id: "runs_10", name: "Persistent", description: "Complete 10 runs", icon: "repeat"),
-        Achievement(id: "runs_50", name: "Dedicated", description: "Complete 50 runs", icon: "heart"),
-        Achievement(id: "runs_100", name: "Addicted", description: "Complete 100 runs", icon: "heart.fill"),
-        Achievement(id: "single_run_100_kills", name: "Rampage", description: "Kill 100 enemies in one run", icon: "bolt"),
-        Achievement(id: "no_damage_10_waves", name: "Untouchable", description: "Complete 10 waves without taking damage", icon: "shield")
-    ]
-
-    static func getAchievement(id: String) -> Achievement? {
-        return allAchievements.first { $0.id == id }
-    }
-}

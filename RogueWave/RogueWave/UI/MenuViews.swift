@@ -865,6 +865,7 @@ class UpgradesView: SubMenuView {
 
     private var goldLabel: SKLabelNode?
     private var upgradeRows: [PermanentUpgrade: SKNode] = [:]
+    private var refundButtons: [PermanentUpgrade: SKNode] = [:]
 
     init(size: CGSize) {
         super.init(size: size, title: "META UPGRADES")
@@ -884,29 +885,32 @@ class UpgradesView: SubMenuView {
             upgradeRows[upgrade] = row
         }
 
-        // Gold display
-        let goldBg = SKShapeNode(rectOf: CGSize(width: 140, height: 35), cornerRadius: 17)
-        goldBg.fillColor = SKColor(red: 0.15, green: 0.12, blue: 0.05, alpha: 1.0)
-        goldBg.strokeColor = SKColor(red: 0.6, green: 0.5, blue: 0.2, alpha: 1.0)
+        // Gold display with better styling
+        let goldContainer = SKNode()
+        goldContainer.position = CGPoint(x: 0, y: -startY - 55)
+        content.addChild(goldContainer)
+
+        let goldBg = SKShapeNode(rectOf: CGSize(width: 160, height: 40), cornerRadius: 20)
+        goldBg.fillColor = SKColor(red: 0.12, green: 0.1, blue: 0.05, alpha: 1.0)
+        goldBg.strokeColor = SKColor(red: 0.7, green: 0.55, blue: 0.2, alpha: 1.0)
         goldBg.lineWidth = 2
-        goldBg.position = CGPoint(x: 0, y: -startY - 60)
-        content.addChild(goldBg)
+        goldBg.glowWidth = 2
+        goldContainer.addChild(goldBg)
 
         let gold = SKLabelNode(fontNamed: UIConfig.fontName)
         gold.text = "💰 \(GameManager.shared.metaProgression.totalGold)"
-        gold.fontSize = 16
+        gold.fontSize = 18
         gold.fontColor = SKColor(red: 1.0, green: 0.85, blue: 0.3, alpha: 1.0)
         gold.verticalAlignmentMode = .center
-        gold.position = CGPoint(x: 0, y: -startY - 60)
-        content.addChild(gold)
+        goldContainer.addChild(gold)
         goldLabel = gold
 
-        // Tap hint
+        // Instructions
         let hint = SKLabelNode(fontNamed: UIConfig.fontName)
-        hint.text = "Tap upgrade to purchase"
-        hint.fontSize = 11
-        hint.fontColor = SKColor(white: 0.4, alpha: 1.0)
-        hint.position = CGPoint(x: 0, y: -startY - 95)
+        hint.text = "Tap to buy • Long press to refund (75%)"
+        hint.fontSize = 10
+        hint.fontColor = SKColor(white: 0.45, alpha: 1.0)
+        hint.position = CGPoint(x: 0, y: -startY - 90)
         content.addChild(hint)
     }
 
@@ -923,7 +927,17 @@ class UpgradesView: SubMenuView {
         for upgrade in PermanentUpgrade.allCases {
             if let row = upgradeRows[upgrade] {
                 let rowLocation = row.convert(contentLocation, from: content)
-                if abs(rowLocation.x) < 140 && abs(rowLocation.y) < 35 {
+
+                // Check refund button first (it's on the right side)
+                if let refundBtn = refundButtons[upgrade] {
+                    let refundLocation = refundBtn.convert(rowLocation, from: row)
+                    if abs(refundLocation.x) < 14 && abs(refundLocation.y) < 14 {
+                        return attemptRefund(upgrade)
+                    }
+                }
+
+                // Check main row for purchase (exclude refund button area)
+                if abs(rowLocation.x) < 140 && abs(rowLocation.y) < 35 && rowLocation.x < 110 {
                     return attemptPurchase(upgrade)
                 }
             }
@@ -1056,7 +1070,53 @@ class UpgradesView: SubMenuView {
         levelLabel.position = CGPoint(x: 125, y: -22)
         row.addChild(levelLabel)
 
+        // Refund button (only show if level > 0)
+        if level > 0 {
+            let refundBtn = SKShapeNode(rectOf: CGSize(width: 24, height: 24), cornerRadius: 4)
+            refundBtn.fillColor = SKColor(red: 0.5, green: 0.2, blue: 0.2, alpha: 0.8)
+            refundBtn.strokeColor = SKColor(red: 0.7, green: 0.3, blue: 0.3, alpha: 1.0)
+            refundBtn.lineWidth = 1
+            refundBtn.position = CGPoint(x: -125 + 250, y: 12)
+            refundBtn.name = "refund_\(upgrade.rawValue)"
+            row.addChild(refundBtn)
+
+            let refundIcon = SKLabelNode(fontNamed: UIConfig.fontName)
+            refundIcon.text = "↩"
+            refundIcon.fontSize = 14
+            refundIcon.fontColor = .white
+            refundIcon.verticalAlignmentMode = .center
+            refundBtn.addChild(refundIcon)
+
+            refundButtons[upgrade] = refundBtn
+        }
+
         return row
+    }
+
+    private func attemptRefund(_ upgrade: PermanentUpgrade) -> Bool {
+        if GameManager.shared.refundUpgrade(upgrade) {
+            // Success - update display
+            refreshUpgradeRow(upgrade)
+            goldLabel?.text = "💰 \(GameManager.shared.metaProgression.totalGold)"
+
+            // Visual feedback
+            if let row = upgradeRows[upgrade] {
+                let flash = SKAction.sequence([
+                    SKAction.run { row.alpha = 0.5 },
+                    SKAction.wait(forDuration: 0.1),
+                    SKAction.run { row.alpha = 1.0 }
+                ])
+                row.run(flash)
+            }
+
+            // Refresh all rows to update affordability
+            for otherUpgrade in PermanentUpgrade.allCases {
+                refreshUpgradeRow(otherUpgrade)
+            }
+
+            return true
+        }
+        return false
     }
 }
 

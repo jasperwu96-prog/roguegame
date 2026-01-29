@@ -35,6 +35,9 @@ class MainMenuScene: SKScene {
     // MARK: - Scene Lifecycle
 
     override func didMove(to view: SKView) {
+        // Load persisted character selection
+        loadPersistedCharacter()
+
         setupBackground()
         setupTitle()
         setupMenuButtons()
@@ -42,6 +45,20 @@ class MainMenuScene: SKScene {
 
         // Play menu music
         AudioManager.shared.playBackgroundMusic()
+    }
+
+    private func loadPersistedCharacter() {
+        let savedClassName = GameManager.shared.selectedCharacterClass
+        if let charClass = CharacterClass.allCases.first(where: { $0.rawValue == savedClassName }) {
+            // Only use if unlocked
+            if charClass.isUnlocked {
+                selectedCharacterClass = charClass
+            }
+        }
+    }
+
+    private func saveCharacterSelection() {
+        GameManager.shared.selectedCharacterClass = selectedCharacterClass.rawValue
     }
 
     // MARK: - Setup
@@ -588,6 +605,7 @@ class MainMenuScene: SKScene {
     private func showCharacters() {
         showSubMenu(CharacterSelectView(size: size, selectedClass: selectedCharacterClass) { [weak self] selectedClass in
             self?.selectedCharacterClass = selectedClass
+            self?.saveCharacterSelection()
             self?.updateCharacterPreview()
             // Don't auto-close - let user browse and close manually
         })

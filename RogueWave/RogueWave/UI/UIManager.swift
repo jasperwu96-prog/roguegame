@@ -80,18 +80,29 @@ class UIManager {
         let screenWidth = scene.size.width
         let screenHeight = scene.size.height
         // Large safe area for Dynamic Island (iPhone 14 Pro and later have ~59pt island)
-        // Using 100 to ensure nothing is covered
-        let safeAreaTop: CGFloat = 100
+        let safeAreaTop: CGFloat = 60
 
         // Camera-centered coordinates: (0,0) is center of screen
         // Top-left: (-screenWidth/2, screenHeight/2)
         // Top-right: (screenWidth/2, screenHeight/2)
 
-        // Health bar (top left, moved further down)
+        // Wave label (top center, in the safe area)
+        waveLabel = createLabel(text: "Wave 1", fontSize: 18)
+        waveLabel.fontColor = SKColor(red: 0.4, green: 0.8, blue: 1.0, alpha: 1.0)
+        waveLabel.position = CGPoint(x: 0, y: screenHeight / 2 - safeAreaTop)
+        hudLayer.addChild(waveLabel)
+
+        // Timer label (below wave)
+        timerLabel = createLabel(text: "0:30", fontSize: 14)
+        timerLabel.fontColor = SKColor(white: 0.7, alpha: 1.0)
+        timerLabel.position = CGPoint(x: 0, y: screenHeight / 2 - safeAreaTop - 22)
+        hudLayer.addChild(timerLabel)
+
+        // Health bar (top left, below wave area)
         healthBar = HealthBar(width: UIConfig.healthBarWidth, height: UIConfig.healthBarHeight)
         healthBar.position = CGPoint(
             x: -screenWidth / 2 + 20 + UIConfig.healthBarWidth / 2,
-            y: screenHeight / 2 - safeAreaTop - 10
+            y: screenHeight / 2 - safeAreaTop - 55
         )
         hudLayer.addChild(healthBar)
 
@@ -99,42 +110,33 @@ class UIManager {
         xpBar = XPBar(width: UIConfig.xpBarWidth, height: UIConfig.xpBarHeight)
         xpBar.position = CGPoint(
             x: -screenWidth / 2 + 20 + UIConfig.xpBarWidth / 2,
-            y: screenHeight / 2 - safeAreaTop - 40
+            y: screenHeight / 2 - safeAreaTop - 80
         )
         hudLayer.addChild(xpBar)
 
         // Level label (next to XP bar)
         levelLabel = createLabel(text: "Lv.1", fontSize: UIConfig.smallFontSize)
+        levelLabel.horizontalAlignmentMode = .left
         levelLabel.position = CGPoint(
-            x: -screenWidth / 2 + 20 + UIConfig.xpBarWidth + 30,
-            y: screenHeight / 2 - safeAreaTop - 40
+            x: -screenWidth / 2 + 20 + UIConfig.xpBarWidth + 10,
+            y: screenHeight / 2 - safeAreaTop - 80
         )
         hudLayer.addChild(levelLabel)
 
-        // Wave label (top center, below Dynamic Island)
-        waveLabel = createLabel(text: "Wave 1", fontSize: UIConfig.titleFontSize)
-        waveLabel.position = CGPoint(x: 0, y: screenHeight / 2 - safeAreaTop - 10)
-        hudLayer.addChild(waveLabel)
-
-        // Timer label (below wave)
-        timerLabel = createLabel(text: "0:30", fontSize: UIConfig.bodyFontSize)
-        timerLabel.position = CGPoint(x: 0, y: screenHeight / 2 - safeAreaTop - 45)
-        hudLayer.addChild(timerLabel)
-
         // Kill count (top right)
-        killCountLabel = createLabel(text: "Kills: 0", fontSize: UIConfig.bodyFontSize)
+        killCountLabel = createLabel(text: "Kills: 0", fontSize: 14)
         killCountLabel.horizontalAlignmentMode = .right
         killCountLabel.position = CGPoint(
             x: screenWidth / 2 - 20,
-            y: screenHeight / 2 - safeAreaTop - 10
+            y: screenHeight / 2 - safeAreaTop - 55
         )
         hudLayer.addChild(killCountLabel)
 
         // Pause button (top right corner)
-        let pauseButton = createButton(text: "II", size: CGSize(width: 44, height: 44))
+        let pauseButton = createButton(text: "II", size: CGSize(width: 40, height: 40))
         pauseButton.position = CGPoint(
-            x: screenWidth / 2 - 40,
-            y: screenHeight / 2 - safeAreaTop - 55
+            x: screenWidth / 2 - 35,
+            y: screenHeight / 2 - safeAreaTop - 95
         )
         pauseButton.name = "pauseButton"
         hudLayer.addChild(pauseButton)
@@ -512,10 +514,12 @@ class AbilityButton: SKNode {
 
     private let abilityType: UpgradeType
     private var background: SKShapeNode!
-    private var cooldownOverlay: SKShapeNode!
-    private var iconLabel: SKLabelNode!
+    private var innerCircle: SKShapeNode!
+    private var cooldownArc: SKShapeNode!
+    private var cooldownLabel: SKLabelNode!
+    private var iconContainer: SKNode!
 
-    private let size: CGFloat = 50
+    private let size: CGFloat = 55
 
     init(abilityType: UpgradeType) {
         self.abilityType = abilityType
@@ -528,43 +532,218 @@ class AbilityButton: SKNode {
     }
 
     private func setup() {
+        // Outer glow ring
+        let glowRing = SKShapeNode(circleOfRadius: size / 2 + 3)
+        glowRing.fillColor = .clear
+        glowRing.strokeColor = abilityType.color
+        glowRing.lineWidth = 2
+        glowRing.glowWidth = 4
+        addChild(glowRing)
+
         // Background
         background = SKShapeNode(circleOfRadius: size / 2)
-        background.fillColor = abilityType.color.withAlphaComponent(0.6)
-        background.strokeColor = .white
-        background.lineWidth = 2
+        background.fillColor = SKColor(red: 0.1, green: 0.12, blue: 0.18, alpha: 0.95)
+        background.strokeColor = abilityType.color
+        background.lineWidth = 3
         addChild(background)
 
-        // Cooldown overlay
-        cooldownOverlay = SKShapeNode(circleOfRadius: size / 2)
-        cooldownOverlay.fillColor = SKColor.black.withAlphaComponent(0.7)
-        cooldownOverlay.strokeColor = .clear
-        cooldownOverlay.isHidden = true
-        addChild(cooldownOverlay)
+        // Inner colored circle
+        innerCircle = SKShapeNode(circleOfRadius: size / 2 - 6)
+        innerCircle.fillColor = abilityType.color.withAlphaComponent(0.25)
+        innerCircle.strokeColor = .clear
+        addChild(innerCircle)
 
-        // Icon (first letter of ability)
-        iconLabel = SKLabelNode(fontNamed: UIConfig.fontName)
-        iconLabel.text = String(abilityType.displayName.prefix(1))
-        iconLabel.fontSize = UIConfig.bodyFontSize
-        iconLabel.fontColor = .white
-        iconLabel.verticalAlignmentMode = .center
-        addChild(iconLabel)
+        // Icon container
+        iconContainer = SKNode()
+        addChild(iconContainer)
+        createAbilityIcon()
+
+        // Cooldown arc (pie-style cooldown)
+        cooldownArc = SKShapeNode()
+        cooldownArc.fillColor = SKColor.black.withAlphaComponent(0.7)
+        cooldownArc.strokeColor = .clear
+        cooldownArc.zPosition = 5
+        cooldownArc.isHidden = true
+        addChild(cooldownArc)
+
+        // Cooldown time label
+        cooldownLabel = SKLabelNode(fontNamed: UIConfig.fontName)
+        cooldownLabel.fontSize = 14
+        cooldownLabel.fontColor = .white
+        cooldownLabel.verticalAlignmentMode = .center
+        cooldownLabel.zPosition = 6
+        cooldownLabel.isHidden = true
+        addChild(cooldownLabel)
 
         isUserInteractionEnabled = true
     }
 
+    private func createAbilityIcon() {
+        iconContainer.removeAllChildren()
+        let iconSize: CGFloat = 18
+
+        switch abilityType {
+        case .dash:
+            // Arrow/speed lines
+            let arrow = SKShapeNode()
+            let path = CGMutablePath()
+            path.move(to: CGPoint(x: -iconSize * 0.6, y: 0))
+            path.addLine(to: CGPoint(x: iconSize * 0.4, y: 0))
+            path.addLine(to: CGPoint(x: iconSize * 0.1, y: iconSize * 0.3))
+            path.move(to: CGPoint(x: iconSize * 0.4, y: 0))
+            path.addLine(to: CGPoint(x: iconSize * 0.1, y: -iconSize * 0.3))
+            arrow.path = path
+            arrow.strokeColor = .white
+            arrow.lineWidth = 3
+            arrow.lineCap = .round
+            iconContainer.addChild(arrow)
+
+            // Speed lines
+            for offset: CGFloat in [-8, -14] {
+                let line = SKShapeNode(rectOf: CGSize(width: 6, height: 2))
+                line.fillColor = .white
+                line.strokeColor = .clear
+                line.position = CGPoint(x: offset, y: 0)
+                iconContainer.addChild(line)
+            }
+
+        case .teleport:
+            // Portal/blink effect
+            let ring1 = SKShapeNode(circleOfRadius: iconSize * 0.5)
+            ring1.fillColor = .clear
+            ring1.strokeColor = .white
+            ring1.lineWidth = 2
+            iconContainer.addChild(ring1)
+
+            let ring2 = SKShapeNode(circleOfRadius: iconSize * 0.25)
+            ring2.fillColor = .white
+            ring2.strokeColor = .clear
+            iconContainer.addChild(ring2)
+
+            // Sparkle effect
+            for angle in stride(from: 0, to: 360, by: 90) {
+                let sparkle = SKShapeNode(rectOf: CGSize(width: 3, height: 8))
+                sparkle.fillColor = .white
+                sparkle.strokeColor = .clear
+                sparkle.zRotation = CGFloat(angle) * .pi / 180
+                sparkle.position = CGPoint(
+                    x: cos(CGFloat(angle) * .pi / 180) * iconSize * 0.7,
+                    y: sin(CGFloat(angle) * .pi / 180) * iconSize * 0.7
+                )
+                iconContainer.addChild(sparkle)
+            }
+
+        case .shield:
+            // Shield shape
+            let shieldPath = CGMutablePath()
+            shieldPath.move(to: CGPoint(x: 0, y: iconSize * 0.6))
+            shieldPath.addCurve(
+                to: CGPoint(x: iconSize * 0.5, y: iconSize * 0.2),
+                control1: CGPoint(x: iconSize * 0.3, y: iconSize * 0.6),
+                control2: CGPoint(x: iconSize * 0.5, y: iconSize * 0.4)
+            )
+            shieldPath.addLine(to: CGPoint(x: iconSize * 0.5, y: -iconSize * 0.2))
+            shieldPath.addCurve(
+                to: CGPoint(x: 0, y: -iconSize * 0.6),
+                control1: CGPoint(x: iconSize * 0.5, y: -iconSize * 0.4),
+                control2: CGPoint(x: iconSize * 0.25, y: -iconSize * 0.6)
+            )
+            shieldPath.addCurve(
+                to: CGPoint(x: -iconSize * 0.5, y: -iconSize * 0.2),
+                control1: CGPoint(x: -iconSize * 0.25, y: -iconSize * 0.6),
+                control2: CGPoint(x: -iconSize * 0.5, y: -iconSize * 0.4)
+            )
+            shieldPath.addLine(to: CGPoint(x: -iconSize * 0.5, y: iconSize * 0.2))
+            shieldPath.addCurve(
+                to: CGPoint(x: 0, y: iconSize * 0.6),
+                control1: CGPoint(x: -iconSize * 0.5, y: iconSize * 0.4),
+                control2: CGPoint(x: -iconSize * 0.3, y: iconSize * 0.6)
+            )
+            let shield = SKShapeNode(path: shieldPath)
+            shield.fillColor = .white.withAlphaComponent(0.3)
+            shield.strokeColor = .white
+            shield.lineWidth = 2
+            iconContainer.addChild(shield)
+
+        case .aoe:
+            // Explosion/burst effect
+            let center = SKShapeNode(circleOfRadius: iconSize * 0.2)
+            center.fillColor = .white
+            center.strokeColor = .clear
+            iconContainer.addChild(center)
+
+            for i in 0..<8 {
+                let angle = CGFloat(i) * .pi / 4
+                let spike = SKShapeNode(rectOf: CGSize(width: 3, height: iconSize * 0.4))
+                spike.fillColor = .white
+                spike.strokeColor = .clear
+                spike.position = CGPoint(
+                    x: cos(angle) * iconSize * 0.4,
+                    y: sin(angle) * iconSize * 0.4
+                )
+                spike.zRotation = angle
+                iconContainer.addChild(spike)
+            }
+
+            let ring = SKShapeNode(circleOfRadius: iconSize * 0.6)
+            ring.fillColor = .clear
+            ring.strokeColor = .white
+            ring.lineWidth = 2
+            iconContainer.addChild(ring)
+
+        default:
+            // Default: First letter
+            let label = SKLabelNode(fontNamed: UIConfig.fontName)
+            label.text = String(abilityType.displayName.prefix(1))
+            label.fontSize = 20
+            label.fontColor = .white
+            label.verticalAlignmentMode = .center
+            iconContainer.addChild(label)
+        }
+    }
+
     func updateCooldown(remaining: TimeInterval, total: TimeInterval) {
         if remaining > 0 {
-            cooldownOverlay.isHidden = false
-            let percent = remaining / total
-            cooldownOverlay.yScale = CGFloat(percent)
+            cooldownArc.isHidden = false
+            cooldownLabel.isHidden = false
+
+            let percent = CGFloat(remaining / total)
+
+            // Create pie-slice cooldown
+            let radius = size / 2 - 2
+            let startAngle: CGFloat = .pi / 2
+            let endAngle = startAngle + (2 * .pi * percent)
+
+            let path = CGMutablePath()
+            path.move(to: .zero)
+            path.addArc(center: .zero, radius: radius, startAngle: startAngle, endAngle: endAngle, clockwise: false)
+            path.closeSubpath()
+
+            cooldownArc.path = path
+
+            // Show remaining time
+            cooldownLabel.text = String(format: "%.1f", remaining)
+
+            // Dim the icon
+            iconContainer.alpha = 0.3
+            innerCircle.alpha = 0.3
         } else {
-            cooldownOverlay.isHidden = true
+            cooldownArc.isHidden = true
+            cooldownLabel.isHidden = true
+            iconContainer.alpha = 1.0
+            innerCircle.alpha = 1.0
         }
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         delegate?.abilityButtonTapped(abilityType)
+
+        // Visual feedback
+        let pulse = SKAction.sequence([
+            SKAction.scale(to: 0.9, duration: 0.05),
+            SKAction.scale(to: 1.0, duration: 0.1)
+        ])
+        run(pulse)
     }
 }
 
@@ -595,24 +774,38 @@ class UpgradeSelectionScreen: SKNode {
     private func setup(size: CGSize) {
         // Dim background (camera-centered: 0,0 is center)
         let background = SKShapeNode(rectOf: size)
-        background.fillColor = SKColor.black.withAlphaComponent(0.8)
+        background.fillColor = SKColor.black.withAlphaComponent(0.85)
         background.strokeColor = .clear
         background.position = CGPoint(x: 0, y: 0)
         addChild(background)
 
-        // Title
+        // Title with glow
+        let titleGlow = SKLabelNode(fontNamed: UIConfig.fontName)
+        titleGlow.text = "LEVEL UP!"
+        titleGlow.fontSize = 28
+        titleGlow.fontColor = SKColor(red: 0.3, green: 0.7, blue: 1.0, alpha: 0.4)
+        titleGlow.position = CGPoint(x: 0, y: size.height / 2 - 80)
+        addChild(titleGlow)
+
         let title = SKLabelNode(fontNamed: UIConfig.fontName)
-        title.text = "Choose an Upgrade"
-        title.fontSize = UIConfig.titleFontSize
-        title.fontColor = .white
-        title.position = CGPoint(x: 0, y: size.height / 2 - 100)
+        title.text = "LEVEL UP!"
+        title.fontSize = 28
+        title.fontColor = SKColor(red: 0.4, green: 0.8, blue: 1.0, alpha: 1.0)
+        title.position = CGPoint(x: 0, y: size.height / 2 - 80)
         addChild(title)
 
-        // Create upgrade cards
-        let cardWidth: CGFloat = 100
-        let cardHeight: CGFloat = 150
+        let subtitle = SKLabelNode(fontNamed: UIConfig.fontName)
+        subtitle.text = "Choose an upgrade"
+        subtitle.fontSize = 14
+        subtitle.fontColor = SKColor(white: 0.6, alpha: 1.0)
+        subtitle.position = CGPoint(x: 0, y: size.height / 2 - 110)
+        addChild(subtitle)
+
+        // Create upgrade cards - larger size
+        let cardWidth: CGFloat = 110
+        let cardHeight: CGFloat = 170
         cardSize = CGSize(width: cardWidth, height: cardHeight)
-        let cardSpacing: CGFloat = 20
+        let cardSpacing: CGFloat = 15
         let totalWidth = CGFloat(choices.count) * cardWidth + CGFloat(choices.count - 1) * cardSpacing
         let startX = -totalWidth / 2 + cardWidth / 2
 
@@ -620,16 +813,26 @@ class UpgradeSelectionScreen: SKNode {
             let card = UpgradeCard(upgrade: upgrade, size: cardSize)
             card.position = CGPoint(
                 x: startX + CGFloat(index) * (cardWidth + cardSpacing),
-                y: 0
+                y: -20
             )
             card.name = "card_\(index)"
             addChild(card)
             cards.append(card)
+
+            // Stagger animation
+            card.alpha = 0
+            card.setScale(0.8)
+            card.run(SKAction.sequence([
+                SKAction.wait(forDuration: 0.1 * Double(index)),
+                SKAction.group([
+                    SKAction.fadeIn(withDuration: 0.2),
+                    SKAction.scale(to: 1.0, duration: 0.2)
+                ])
+            ]))
         }
     }
 
     func handleTouch(at location: CGPoint) {
-        // Use manual hit detection with known card size (more reliable than frame.contains)
         let halfWidth = cardSize.width / 2
         let halfHeight = cardSize.height / 2
 
@@ -645,8 +848,8 @@ class UpgradeSelectionScreen: SKNode {
 
                 // Visual feedback
                 card.run(SKAction.sequence([
-                    SKAction.scale(to: 1.2, duration: 0.1),
-                    SKAction.scale(to: 1.0, duration: 0.1)
+                    SKAction.scale(to: 1.15, duration: 0.08),
+                    SKAction.scale(to: 1.0, duration: 0.08)
                 ]))
                 return
             }
@@ -671,48 +874,249 @@ class UpgradeCard: SKNode {
     }
 
     private func setup(size: CGSize) {
-        // Card background
-        let background = SKShapeNode(rectOf: size, cornerRadius: 10)
-        background.fillColor = upgrade.color.withAlphaComponent(0.3)
+        // Card background with gradient effect
+        let background = SKShapeNode(rectOf: size, cornerRadius: 12)
+        background.fillColor = SKColor(red: 0.08, green: 0.1, blue: 0.15, alpha: 0.95)
         background.strokeColor = upgrade.color
-        background.lineWidth = 3
+        background.lineWidth = 2
+        background.glowWidth = 3
         addChild(background)
 
-        // Icon circle
-        let iconCircle = SKShapeNode(circleOfRadius: 25)
-        iconCircle.fillColor = upgrade.color.withAlphaComponent(0.5)
-        iconCircle.strokeColor = .white
-        iconCircle.lineWidth = 2
-        iconCircle.position = CGPoint(x: 0, y: size.height / 2 - 45)
-        addChild(iconCircle)
+        // Top accent bar
+        let accentBar = SKShapeNode(rectOf: CGSize(width: size.width - 20, height: 3), cornerRadius: 1.5)
+        accentBar.fillColor = upgrade.color
+        accentBar.strokeColor = .clear
+        accentBar.position = CGPoint(x: 0, y: size.height / 2 - 12)
+        addChild(accentBar)
 
-        // Icon letter
-        let iconLabel = SKLabelNode(fontNamed: UIConfig.fontName)
-        iconLabel.text = String(upgrade.displayName.prefix(1))
-        iconLabel.fontSize = 24
-        iconLabel.fontColor = .white
-        iconLabel.verticalAlignmentMode = .center
-        iconCircle.addChild(iconLabel)
+        // Icon container with background
+        let iconBg = SKShapeNode(circleOfRadius: 28)
+        iconBg.fillColor = upgrade.color.withAlphaComponent(0.2)
+        iconBg.strokeColor = upgrade.color
+        iconBg.lineWidth = 2
+        iconBg.position = CGPoint(x: 0, y: size.height / 2 - 55)
+        addChild(iconBg)
 
-        // Name
+        // Create upgrade icon
+        let iconContainer = SKNode()
+        iconContainer.position = CGPoint(x: 0, y: size.height / 2 - 55)
+        addChild(iconContainer)
+        createUpgradeIcon(in: iconContainer, type: upgrade.type)
+
+        // Name label - positioned below icon
         let nameLabel = SKLabelNode(fontNamed: UIConfig.fontName)
         nameLabel.text = upgrade.displayName
-        nameLabel.fontSize = UIConfig.smallFontSize
+        nameLabel.fontSize = 13
         nameLabel.fontColor = .white
-        nameLabel.position = CGPoint(x: 0, y: 0)
+        nameLabel.position = CGPoint(x: 0, y: size.height / 2 - 95)
         nameLabel.numberOfLines = 2
-        nameLabel.preferredMaxLayoutWidth = size.width - 10
+        nameLabel.preferredMaxLayoutWidth = size.width - 16
+        nameLabel.verticalAlignmentMode = .top
         addChild(nameLabel)
 
-        // Description
+        // Description - positioned at bottom
         let descLabel = SKLabelNode(fontNamed: UIConfig.fontName)
         descLabel.text = upgrade.type.description
-        descLabel.fontSize = 10
-        descLabel.fontColor = SKColor.white.withAlphaComponent(0.8)
-        descLabel.position = CGPoint(x: 0, y: -size.height / 2 + 30)
-        descLabel.numberOfLines = 2
-        descLabel.preferredMaxLayoutWidth = size.width - 10
+        descLabel.fontSize = 9
+        descLabel.fontColor = SKColor(white: 0.6, alpha: 1.0)
+        descLabel.position = CGPoint(x: 0, y: -size.height / 2 + 35)
+        descLabel.numberOfLines = 3
+        descLabel.preferredMaxLayoutWidth = size.width - 16
+        descLabel.verticalAlignmentMode = .bottom
         addChild(descLabel)
+
+        // Tap hint
+        let tapHint = SKLabelNode(fontNamed: UIConfig.fontName)
+        tapHint.text = "TAP"
+        tapHint.fontSize = 8
+        tapHint.fontColor = upgrade.color
+        tapHint.position = CGPoint(x: 0, y: -size.height / 2 + 12)
+        addChild(tapHint)
+    }
+
+    private func createUpgradeIcon(in container: SKNode, type: UpgradeType) {
+        let iconSize: CGFloat = 16
+
+        switch type {
+        case .damage:
+            // Sword icon
+            let blade = SKShapeNode(rectOf: CGSize(width: 6, height: iconSize * 1.5))
+            blade.fillColor = .white
+            blade.strokeColor = .clear
+            blade.position = CGPoint(x: 0, y: 4)
+            container.addChild(blade)
+
+            let guard_ = SKShapeNode(rectOf: CGSize(width: iconSize, height: 4))
+            guard_.fillColor = .white
+            guard_.strokeColor = .clear
+            guard_.position = CGPoint(x: 0, y: -6)
+            container.addChild(guard_)
+
+        case .attackSpeed:
+            // Double arrows
+            for offset: CGFloat in [-6, 6] {
+                let arrow = createArrowShape(size: iconSize * 0.7)
+                arrow.position = CGPoint(x: offset, y: 0)
+                container.addChild(arrow)
+            }
+
+        case .health:
+            // Heart icon
+            let heart = SKShapeNode(circleOfRadius: iconSize * 0.5)
+            heart.fillColor = .white
+            heart.strokeColor = .clear
+            container.addChild(heart)
+
+            let plus = SKShapeNode(rectOf: CGSize(width: iconSize * 0.4, height: 3))
+            plus.fillColor = upgrade.color
+            plus.strokeColor = .clear
+            container.addChild(plus)
+            let plusV = SKShapeNode(rectOf: CGSize(width: 3, height: iconSize * 0.4))
+            plusV.fillColor = upgrade.color
+            plusV.strokeColor = .clear
+            container.addChild(plusV)
+
+        case .speed:
+            // Running figure / speed lines
+            let body = SKShapeNode(circleOfRadius: 5)
+            body.fillColor = .white
+            body.strokeColor = .clear
+            body.position = CGPoint(x: 3, y: 4)
+            container.addChild(body)
+
+            for i in 0..<3 {
+                let line = SKShapeNode(rectOf: CGSize(width: 8 - CGFloat(i) * 2, height: 2))
+                line.fillColor = .white.withAlphaComponent(1.0 - CGFloat(i) * 0.3)
+                line.strokeColor = .clear
+                line.position = CGPoint(x: -8 - CGFloat(i) * 4, y: CGFloat(i - 1) * 4)
+                container.addChild(line)
+            }
+
+        case .critChance, .critDamage:
+            // Lightning bolt
+            let boltPath = CGMutablePath()
+            boltPath.move(to: CGPoint(x: 4, y: iconSize))
+            boltPath.addLine(to: CGPoint(x: -2, y: 2))
+            boltPath.addLine(to: CGPoint(x: 4, y: 2))
+            boltPath.addLine(to: CGPoint(x: -4, y: -iconSize))
+            boltPath.addLine(to: CGPoint(x: 2, y: -2))
+            boltPath.addLine(to: CGPoint(x: -4, y: -2))
+            boltPath.closeSubpath()
+            let bolt = SKShapeNode(path: boltPath)
+            bolt.fillColor = .white
+            bolt.strokeColor = .clear
+            container.addChild(bolt)
+
+        case .dash:
+            let arrow = createArrowShape(size: iconSize)
+            container.addChild(arrow)
+            for offset: CGFloat in [-10, -16] {
+                let line = SKShapeNode(rectOf: CGSize(width: 4, height: 2))
+                line.fillColor = .white.withAlphaComponent(0.6)
+                line.strokeColor = .clear
+                line.position = CGPoint(x: offset, y: 0)
+                container.addChild(line)
+            }
+
+        case .teleport:
+            let ring = SKShapeNode(circleOfRadius: iconSize * 0.6)
+            ring.fillColor = .clear
+            ring.strokeColor = .white
+            ring.lineWidth = 2
+            container.addChild(ring)
+            let center = SKShapeNode(circleOfRadius: iconSize * 0.2)
+            center.fillColor = .white
+            center.strokeColor = .clear
+            container.addChild(center)
+
+        case .shield:
+            let shieldPath = CGMutablePath()
+            shieldPath.move(to: CGPoint(x: 0, y: iconSize * 0.7))
+            shieldPath.addLine(to: CGPoint(x: iconSize * 0.6, y: iconSize * 0.3))
+            shieldPath.addLine(to: CGPoint(x: iconSize * 0.6, y: -iconSize * 0.3))
+            shieldPath.addLine(to: CGPoint(x: 0, y: -iconSize * 0.7))
+            shieldPath.addLine(to: CGPoint(x: -iconSize * 0.6, y: -iconSize * 0.3))
+            shieldPath.addLine(to: CGPoint(x: -iconSize * 0.6, y: iconSize * 0.3))
+            shieldPath.closeSubpath()
+            let shield = SKShapeNode(path: shieldPath)
+            shield.fillColor = .white.withAlphaComponent(0.3)
+            shield.strokeColor = .white
+            shield.lineWidth = 2
+            container.addChild(shield)
+
+        case .aoe:
+            let center = SKShapeNode(circleOfRadius: 4)
+            center.fillColor = .white
+            center.strokeColor = .clear
+            container.addChild(center)
+            for i in 0..<6 {
+                let angle = CGFloat(i) * .pi / 3
+                let ray = SKShapeNode(rectOf: CGSize(width: 3, height: 8))
+                ray.fillColor = .white
+                ray.strokeColor = .clear
+                ray.position = CGPoint(x: cos(angle) * 10, y: sin(angle) * 10)
+                ray.zRotation = angle
+                container.addChild(ray)
+            }
+
+        case .lifeSteal:
+            // Fang/vampire icon
+            let fang1 = SKShapeNode(rectOf: CGSize(width: 4, height: iconSize))
+            fang1.fillColor = .white
+            fang1.strokeColor = .clear
+            fang1.position = CGPoint(x: -5, y: -2)
+            container.addChild(fang1)
+            let fang2 = SKShapeNode(rectOf: CGSize(width: 4, height: iconSize))
+            fang2.fillColor = .white
+            fang2.strokeColor = .clear
+            fang2.position = CGPoint(x: 5, y: -2)
+            container.addChild(fang2)
+
+        case .armor:
+            let chestplate = SKShapeNode(rectOf: CGSize(width: iconSize * 1.2, height: iconSize))
+            chestplate.fillColor = .white.withAlphaComponent(0.3)
+            chestplate.strokeColor = .white
+            chestplate.lineWidth = 2
+            container.addChild(chestplate)
+
+        case .projectileCount:
+            for offset: CGFloat in [-8, 0, 8] {
+                let bullet = SKShapeNode(circleOfRadius: 4)
+                bullet.fillColor = .white
+                bullet.strokeColor = .clear
+                bullet.position = CGPoint(x: offset, y: 0)
+                container.addChild(bullet)
+            }
+
+        default:
+            // Default: first letter
+            let label = SKLabelNode(fontNamed: UIConfig.fontName)
+            label.text = String(type.displayName.prefix(1))
+            label.fontSize = 20
+            label.fontColor = .white
+            label.verticalAlignmentMode = .center
+            container.addChild(label)
+        }
+    }
+
+    private func createArrowShape(size: CGFloat) -> SKNode {
+        let container = SKNode()
+        let shaft = SKShapeNode(rectOf: CGSize(width: size * 0.8, height: 4))
+        shaft.fillColor = .white
+        shaft.strokeColor = .clear
+        container.addChild(shaft)
+
+        let headPath = CGMutablePath()
+        headPath.move(to: CGPoint(x: size * 0.4, y: 0))
+        headPath.addLine(to: CGPoint(x: size * 0.1, y: size * 0.4))
+        headPath.addLine(to: CGPoint(x: size * 0.1, y: -size * 0.4))
+        headPath.closeSubpath()
+        let head = SKShapeNode(path: headPath)
+        head.fillColor = .white
+        head.strokeColor = .clear
+        container.addChild(head)
+
+        return container
     }
 }
 

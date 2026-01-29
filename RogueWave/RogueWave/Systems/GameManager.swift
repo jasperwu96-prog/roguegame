@@ -132,6 +132,16 @@ class GameManager {
         }
     }
 
+    // Persisted character selection
+    var selectedCharacterClass: String {
+        get {
+            return UserDefaults.standard.string(forKey: "selectedCharacterClass") ?? "Knight"
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "selectedCharacterClass")
+        }
+    }
+
     // Current run state
     var isRunActive: Bool = false
 
@@ -242,6 +252,20 @@ class GameManager {
         let currentLevel = metaProgression.permanentUpgrades[upgrade] ?? 0
         guard currentLevel < upgrade.maxLevel else { return false }
         return metaProgression.totalGold >= upgrade.cost(forLevel: currentLevel)
+    }
+
+    func refundUpgrade(_ upgrade: PermanentUpgrade) -> Bool {
+        let currentLevel = metaProgression.permanentUpgrades[upgrade] ?? 0
+
+        guard currentLevel > 0 else { return false }
+
+        // Refund the cost of the previous level (75% refund)
+        let refundAmount = Int(Double(upgrade.cost(forLevel: currentLevel - 1)) * 0.75)
+        metaProgression.totalGold += refundAmount
+        metaProgression.permanentUpgrades[upgrade] = currentLevel - 1
+
+        saveProgress()
+        return true
     }
 
     // MARK: - Starting Stats with Permanent Upgrades

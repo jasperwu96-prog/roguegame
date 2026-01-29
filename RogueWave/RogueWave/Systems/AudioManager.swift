@@ -24,6 +24,36 @@ class AudioManager {
     private var musicVolume: Float = 0.5
     private var sfxVolume: Float = 0.7
 
+    // MARK: - Haptic Generators (reused to avoid allocation overhead)
+
+    private lazy var lightImpactGenerator: UIImpactFeedbackGenerator = {
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.prepare()
+        return generator
+    }()
+
+    private lazy var mediumImpactGenerator: UIImpactFeedbackGenerator = {
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.prepare()
+        return generator
+    }()
+
+    private lazy var heavyImpactGenerator: UIImpactFeedbackGenerator = {
+        let generator = UIImpactFeedbackGenerator(style: .heavy)
+        generator.prepare()
+        return generator
+    }()
+
+    private lazy var notificationGenerator: UINotificationFeedbackGenerator = {
+        let generator = UINotificationFeedbackGenerator()
+        generator.prepare()
+        return generator
+    }()
+
+    // Haptic throttling - limit to avoid overwhelming the haptic engine
+    private var lastHapticTime: TimeInterval = 0
+    private let hapticMinInterval: TimeInterval = 0.05  // Max 20 haptics per second
+
     // MARK: - Sound Effect Names
 
     enum SFX: String {
@@ -207,28 +237,43 @@ class AudioManager {
 
     // MARK: - Haptic Feedback
 
+    private func canTriggerHaptic() -> Bool {
+        let currentTime = CACurrentMediaTime()
+        if currentTime - lastHapticTime >= hapticMinInterval {
+            lastHapticTime = currentTime
+            return true
+        }
+        return false
+    }
+
     private func triggerHaptic(style: UIImpactFeedbackGenerator.FeedbackStyle) {
-        guard isHapticsEnabled else { return }
-        let generator = UIImpactFeedbackGenerator(style: style)
-        generator.impactOccurred()
+        guard isHapticsEnabled, canTriggerHaptic() else { return }
+
+        switch style {
+        case .light:
+            lightImpactGenerator.impactOccurred()
+        case .medium:
+            mediumImpactGenerator.impactOccurred()
+        case .heavy:
+            heavyImpactGenerator.impactOccurred()
+        default:
+            mediumImpactGenerator.impactOccurred()
+        }
     }
 
     func triggerSuccessHaptic() {
-        guard isHapticsEnabled else { return }
-        let generator = UINotificationFeedbackGenerator()
-        generator.notificationOccurred(.success)
+        guard isHapticsEnabled, canTriggerHaptic() else { return }
+        notificationGenerator.notificationOccurred(.success)
     }
 
     func triggerWarningHaptic() {
-        guard isHapticsEnabled else { return }
-        let generator = UINotificationFeedbackGenerator()
-        generator.notificationOccurred(.warning)
+        guard isHapticsEnabled, canTriggerHaptic() else { return }
+        notificationGenerator.notificationOccurred(.warning)
     }
 
     func triggerErrorHaptic() {
-        guard isHapticsEnabled else { return }
-        let generator = UINotificationFeedbackGenerator()
-        generator.notificationOccurred(.error)
+        guard isHapticsEnabled, canTriggerHaptic() else { return }
+        notificationGenerator.notificationOccurred(.error)
     }
 
     // MARK: - Toggle Settings

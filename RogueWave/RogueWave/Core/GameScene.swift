@@ -1075,7 +1075,22 @@ extension GameScene: SKPhysicsContactDelegate {
 
     // MARK: - Enhanced Screen Shake
 
+    private var cameraOriginalPosition: CGPoint = .zero
+    private var isShaking: Bool = false
+
     private func triggerScreenShake(intensity: CGFloat, duration: TimeInterval = 0.2) {
+        // Check if screen shake is enabled
+        guard GameManager.shared.screenShakeEnabled else { return }
+
+        // Cancel any existing shake and reset position
+        if isShaking {
+            gameCamera.removeAction(forKey: "screenShake")
+            gameCamera.position = cameraOriginalPosition
+        }
+
+        isShaking = true
+        cameraOriginalPosition = gameCamera.position
+
         let shakeCount = Int(duration / 0.02)
         var shakeActions: [SKAction] = []
 
@@ -1087,12 +1102,12 @@ extension GameScene: SKPhysicsContactDelegate {
         }
 
         // Return to original position
-        shakeActions.append(SKAction.move(to: gameCamera.position, duration: 0.05))
+        shakeActions.append(SKAction.move(to: cameraOriginalPosition, duration: 0.05))
+        shakeActions.append(SKAction.run { [weak self] in
+            self?.isShaking = false
+        })
 
-        let originalPos = gameCamera.position
-        gameCamera.run(SKAction.sequence(shakeActions)) { [weak self] in
-            self?.gameCamera.position = originalPos
-        }
+        gameCamera.run(SKAction.sequence(shakeActions), withKey: "screenShake")
     }
 
     private func triggerHitFreeze(duration: TimeInterval = 0.03) {

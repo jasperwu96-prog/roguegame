@@ -1303,8 +1303,13 @@ class Enemy: SKNode {
         isActive = false
         physicsBody?.categoryBitMask = GameConfig.PhysicsCategory.none
 
-        // Remove actions
-        removeAction(forKey: "elitePulse")
+        // Remove ALL actions to prevent memory leaks from repeatForever animations
+        removeAllActions()
+
+        // Also remove actions from child nodes (boss particles, fuse sparks, etc.)
+        enumerateChildNodes(withName: "//*") { node, _ in
+            node.removeAllActions()
+        }
 
         // Death animation - notify delegate, then remove from scene
         let deathAction = SKAction.sequence([

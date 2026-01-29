@@ -97,13 +97,16 @@ class Projectile: SKNode {
     }
 
     private func addTrailEffect() {
-        // Create a fading trail behind the projectile
+        // Only add trail effects to player projectiles to reduce particle count
+        guard isPlayerProjectile else { return }
+
+        // Create a fading trail behind the projectile (reduced frequency)
         let trailAction = SKAction.repeatForever(
             SKAction.sequence([
                 SKAction.run { [weak self] in
                     self?.spawnTrailParticle()
                 },
-                SKAction.wait(forDuration: 0.02)
+                SKAction.wait(forDuration: 0.06)  // Reduced from 0.02 to 0.06 (3x less particles)
             ])
         )
         run(trailAction, withKey: "trail")
@@ -112,8 +115,8 @@ class Projectile: SKNode {
     private func spawnTrailParticle() {
         guard let parentNode = parent else { return }
 
-        let trail = SKShapeNode(circleOfRadius: isPlayerProjectile ? 3 : 2)
-        trail.fillColor = spriteNode.fillColor.withAlphaComponent(0.5)
+        let trail = SKShapeNode(circleOfRadius: 2)
+        trail.fillColor = spriteNode.fillColor.withAlphaComponent(0.4)
         trail.strokeColor = .clear
         trail.position = position
         trail.zPosition = zPosition - 1
@@ -122,8 +125,8 @@ class Projectile: SKNode {
 
         let fadeAction = SKAction.sequence([
             SKAction.group([
-                SKAction.fadeOut(withDuration: 0.15),
-                SKAction.scale(to: 0.3, duration: 0.15)
+                SKAction.fadeOut(withDuration: 0.12),
+                SKAction.scale(to: 0.2, duration: 0.12)
             ]),
             SKAction.removeFromParent()
         ])

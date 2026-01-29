@@ -1142,17 +1142,24 @@ extension GameScene: SKPhysicsContactDelegate {
         gameCamera.run(SKAction.sequence(shakeActions), withKey: "screenShake")
     }
 
+    private var hitFreezeActive: Bool = false
+
     private func triggerHitFreeze(duration: TimeInterval = 0.03) {
-        // Brief pause for impactful hits - use key to prevent stacking
-        removeAction(forKey: "hitFreeze")
+        // Prevent stacking freezes
+        guard !hitFreezeActive else { return }
+        hitFreezeActive = true
+
+        // Brief pause for impactful hits
+        // IMPORTANT: Use DispatchQueue instead of SKAction because isPaused
+        // also pauses actions, which would prevent the unpause from running!
         isPaused = true
-        run(SKAction.sequence([
-            SKAction.wait(forDuration: duration),
-            SKAction.run { [weak self] in
-                guard self?.gameState == .playing else { return }
-                self?.isPaused = false
-            }
-        ]), withKey: "hitFreeze")
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration) { [weak self] in
+            guard let self = self else { return }
+            self.hitFreezeActive = false
+            guard self.gameState == .playing else { return }
+            self.isPaused = false
+        }
     }
 
     private func handleEnemyProjectilePlayerCollision(_ contact: SKPhysicsContact) {

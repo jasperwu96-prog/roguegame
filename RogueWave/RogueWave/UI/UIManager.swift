@@ -665,7 +665,7 @@ class AbilityButton: SKNode {
             shield.lineWidth = 2
             iconContainer.addChild(shield)
 
-        case .aoe:
+        case .aoeBlast:
             // Explosion/burst effect
             let center = SKShapeNode(circleOfRadius: iconSize * 0.2)
             center.fillColor = .white
@@ -960,7 +960,7 @@ class UpgradeCard: SKNode {
                 container.addChild(arrow)
             }
 
-        case .health:
+        case .maxHealth:
             // Heart icon
             let heart = SKShapeNode(circleOfRadius: iconSize * 0.5)
             heart.fillColor = .white
@@ -976,7 +976,7 @@ class UpgradeCard: SKNode {
             plusV.strokeColor = .clear
             container.addChild(plusV)
 
-        case .speed:
+        case .moveSpeed:
             // Running figure / speed lines
             let body = SKShapeNode(circleOfRadius: 5)
             body.fillColor = .white
@@ -1044,7 +1044,7 @@ class UpgradeCard: SKNode {
             shield.lineWidth = 2
             container.addChild(shield)
 
-        case .aoe:
+        case .aoeBlast:
             let center = SKShapeNode(circleOfRadius: 4)
             center.fillColor = .white
             center.strokeColor = .clear
@@ -1079,7 +1079,7 @@ class UpgradeCard: SKNode {
             chestplate.lineWidth = 2
             container.addChild(chestplate)
 
-        case .projectileCount:
+        case .multishot:
             for offset: CGFloat in [-8, 0, 8] {
                 let bullet = SKShapeNode(circleOfRadius: 4)
                 bullet.fillColor = .white

@@ -580,6 +580,7 @@ class UpgradeSelectionScreen: SKNode {
 
     private let choices: [Upgrade]
     private var cards: [UpgradeCard] = []
+    private var cardSize: CGSize = .zero
 
     init(size: CGSize, choices: [Upgrade]) {
         self.choices = choices
@@ -610,12 +611,13 @@ class UpgradeSelectionScreen: SKNode {
         // Create upgrade cards
         let cardWidth: CGFloat = 100
         let cardHeight: CGFloat = 150
+        cardSize = CGSize(width: cardWidth, height: cardHeight)
         let cardSpacing: CGFloat = 20
         let totalWidth = CGFloat(choices.count) * cardWidth + CGFloat(choices.count - 1) * cardSpacing
         let startX = -totalWidth / 2 + cardWidth / 2
 
         for (index, upgrade) in choices.enumerated() {
-            let card = UpgradeCard(upgrade: upgrade, size: CGSize(width: cardWidth, height: cardHeight))
+            let card = UpgradeCard(upgrade: upgrade, size: cardSize)
             card.position = CGPoint(
                 x: startX + CGFloat(index) * (cardWidth + cardSpacing),
                 y: 0
@@ -627,8 +629,18 @@ class UpgradeSelectionScreen: SKNode {
     }
 
     func handleTouch(at location: CGPoint) {
+        // Use manual hit detection with known card size (more reliable than frame.contains)
+        let halfWidth = cardSize.width / 2
+        let halfHeight = cardSize.height / 2
+
         for (index, card) in cards.enumerated() {
-            if card.contains(location) {
+            let minX = card.position.x - halfWidth
+            let maxX = card.position.x + halfWidth
+            let minY = card.position.y - halfHeight
+            let maxY = card.position.y + halfHeight
+
+            if location.x >= minX && location.x <= maxX &&
+               location.y >= minY && location.y <= maxY {
                 delegate?.didSelectUpgrade(choices[index])
 
                 // Visual feedback

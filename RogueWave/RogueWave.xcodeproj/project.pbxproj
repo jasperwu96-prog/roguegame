@@ -22,6 +22,10 @@
 		A10000000000000000000013 /* UIManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000013 /* UIManager.swift */; };
 		A10000000000000000000014 /* GameManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000014 /* GameManager.swift */; };
 		A10000000000000000000015 /* Projectile.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000015 /* Projectile.swift */; };
+		A10000000000000000000016 /* MainMenuScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000017 /* MainMenuScene.swift */; };
+		A10000000000000000000017 /* MenuViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000018 /* MenuViews.swift */; };
+		A10000000000000000000018 /* AudioManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000019 /* AudioManager.swift */; };
+		A10000000000000000000019 /* AchievementManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000020 /* AchievementManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -42,6 +46,10 @@
 		A20000000000000000000014 /* GameManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameManager.swift; sourceTree = "<group>"; };
 		A20000000000000000000015 /* Projectile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Projectile.swift; sourceTree = "<group>"; };
 		A20000000000000000000016 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A20000000000000000000017 /* MainMenuScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainMenuScene.swift; sourceTree = "<group>"; };
+		A20000000000000000000018 /* MenuViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuViews.swift; sourceTree = "<group>"; };
+		A20000000000000000000019 /* AudioManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioManager.swift; sourceTree = "<group>"; };
+		A20000000000000000000020 /* AchievementManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AchievementManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -113,6 +121,8 @@
 				A20000000000000000000010 /* WaveManager.swift */,
 				A20000000000000000000011 /* UpgradeSystem.swift */,
 				A20000000000000000000014 /* GameManager.swift */,
+				A20000000000000000000019 /* AudioManager.swift */,
+				A20000000000000000000020 /* AchievementManager.swift */,
 			);
 			path = Systems;
 			sourceTree = "<group>";
@@ -122,6 +132,8 @@
 			children = (
 				A20000000000000000000009 /* VirtualJoystick.swift */,
 				A20000000000000000000013 /* UIManager.swift */,
+				A20000000000000000000017 /* MainMenuScene.swift */,
+				A20000000000000000000018 /* MenuViews.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -217,6 +229,10 @@
 				A10000000000000000000013 /* UIManager.swift in Sources */,
 				A10000000000000000000014 /* GameManager.swift in Sources */,
 				A10000000000000000000015 /* Projectile.swift in Sources */,
+				A10000000000000000000016 /* MainMenuScene.swift in Sources */,
+				A10000000000000000000017 /* MenuViews.swift in Sources */,
+				A10000000000000000000018 /* AudioManager.swift in Sources */,
+				A10000000000000000000019 /* AchievementManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

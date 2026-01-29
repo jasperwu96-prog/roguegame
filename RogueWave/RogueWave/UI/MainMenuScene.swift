@@ -224,11 +224,16 @@ class MainMenuScene: SKScene {
 
     // MARK: - Touch Handling
 
+    private var touchStartLocation: CGPoint?
+    private var lastTouchLocation: CGPoint?
+
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = touches.first else { return }
         let location = touch.location(in: self)
+        touchStartLocation = location
+        lastTouchLocation = location
 
-        // If submenu is open, pass touches to it
+        // If submenu is open, check close button only (tap handling done on touchesEnded)
         if let submenu = currentSubMenu as? SubMenuView {
             let submenuLocation = touch.location(in: submenu)
 
@@ -240,16 +245,48 @@ class MainMenuScene: SKScene {
                     return
                 }
             }
-
-            // Let submenu handle the touch
-            if submenu.handleTouch(at: submenuLocation) {
-                AudioManager.shared.playSFX(.buttonPress, on: self)
-            }
             return
         }
 
         // Handle menu button touches
         handleButtonTouch(at: location)
+    }
+
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard let touch = touches.first else { return }
+        let location = touch.location(in: self)
+
+        // Handle scrolling in character select view
+        if let charSelect = currentSubMenu as? CharacterSelectView,
+           let lastLocation = lastTouchLocation {
+            let submenuLocation = touch.location(in: charSelect)
+            let lastSubmenuLocation = convert(lastLocation, to: charSelect)
+            charSelect.handleDrag(from: lastSubmenuLocation, to: submenuLocation)
+        }
+
+        lastTouchLocation = location
+    }
+
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard let touch = touches.first else { return }
+        let location = touch.location(in: self)
+
+        // Check if this was a tap (not a drag)
+        if let startLocation = touchStartLocation {
+            let distance = hypot(location.x - startLocation.x, location.y - startLocation.y)
+            let wasTap = distance < 20  // Threshold for tap vs drag
+
+            // Handle tap on submenu elements
+            if wasTap, let submenu = currentSubMenu as? SubMenuView {
+                let submenuLocation = touch.location(in: submenu)
+                if submenu.handleTouch(at: submenuLocation) {
+                    AudioManager.shared.playSFX(.buttonPress, on: self)
+                }
+            }
+        }
+
+        touchStartLocation = nil
+        lastTouchLocation = nil
     }
 
     private func handleButtonTouch(at location: CGPoint) {
@@ -312,8 +349,9 @@ class MainMenuScene: SKScene {
         // Close existing submenu
         currentSubMenu?.removeFromParent()
 
-        // Fade out main menu
-        menuContainer.run(SKAction.fadeAlpha(to: 0.3, duration: 0.2))
+        // Hide main menu completely
+        menuContainer.isHidden = true
+        backgroundLayer.isHidden = true
 
         // Add submenu
         submenu.alpha = 0
@@ -329,8 +367,10 @@ class MainMenuScene: SKScene {
         ]))
         currentSubMenu = nil
 
-        // Fade in main menu
-        menuContainer.run(SKAction.fadeAlpha(to: 1.0, duration: 0.2))
+        // Show main menu again
+        menuContainer.isHidden = false
+        backgroundLayer.isHidden = false
+        menuContainer.alpha = 1.0
     }
 }
 

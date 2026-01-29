@@ -287,6 +287,10 @@ class CharacterSelectView: SubMenuView {
     private let cardWidth: CGFloat = 130
     private let cardHeight: CGFloat = 180
     private let spacing: CGFloat = 15
+    private var scrollOffset: CGFloat = 0
+    private var lastTouchX: CGFloat = 0
+    private var isDragging: Bool = false
+    private var cardsContainer: SKNode?
 
     init(size: CGSize, selectedClass: CharacterClass, onSelect: @escaping (CharacterClass) -> Void) {
         self.selectedClass = selectedClass
@@ -294,41 +298,103 @@ class CharacterSelectView: SubMenuView {
         super.init(size: size, title: "SELECT CHARACTER")
 
         let content = createScrollableContent()
-        rebuildCards(in: content)
+
+        // Create a container for scrollable cards
+        let container = SKNode()
+        container.name = "cardsContainer"
+        content.addChild(container)
+        cardsContainer = container
+
+        rebuildCards(in: container)
+
+        // Add scroll hint arrows
+        addScrollHints(to: content)
     }
 
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 
-    private func rebuildCards(in content: SKNode) {
+    private func addScrollHints(to content: SKNode) {
+        let arrowColor = SKColor(white: 0.5, alpha: 0.8)
+
+        // Left arrow
+        let leftArrow = SKLabelNode(fontNamed: UIConfig.fontName)
+        leftArrow.text = "◀"
+        leftArrow.fontSize = 24
+        leftArrow.fontColor = arrowColor
+        leftArrow.position = CGPoint(x: -viewSize.width / 2 + 50, y: 0)
+        leftArrow.name = "leftArrow"
+        content.addChild(leftArrow)
+
+        // Right arrow
+        let rightArrow = SKLabelNode(fontNamed: UIConfig.fontName)
+        rightArrow.text = "▶"
+        rightArrow.fontSize = 24
+        rightArrow.fontColor = arrowColor
+        rightArrow.position = CGPoint(x: viewSize.width / 2 - 50, y: 0)
+        rightArrow.name = "rightArrow"
+        content.addChild(rightArrow)
+
+        // Swipe hint
+        let hint = SKLabelNode(fontNamed: UIConfig.fontName)
+        hint.text = "Swipe to see more"
+        hint.fontSize = 12
+        hint.fontColor = SKColor(white: 0.5, alpha: 1.0)
+        hint.position = CGPoint(x: 0, y: -cardHeight / 2 - 30)
+        content.addChild(hint)
+    }
+
+    private func rebuildCards(in container: SKNode) {
         // Remove existing cards
-        content.removeAllChildren()
+        container.removeAllChildren()
 
         for (index, charClass) in CharacterClass.allCases.enumerated() {
-            let x = CGFloat(index - CharacterClass.allCases.count / 2) * (cardWidth + spacing) + (cardWidth + spacing) / 2
+            let x = CGFloat(index) * (cardWidth + spacing)
             let card = createCharacterCard(charClass, width: cardWidth, height: cardHeight, isSelected: charClass == selectedClass)
             card.position = CGPoint(x: x, y: 0)
             card.name = charClass.rawValue
-            content.addChild(card)
+            container.addChild(card)
         }
+
+        // Center the cards initially
+        let totalWidth = CGFloat(CharacterClass.allCases.count) * (cardWidth + spacing) - spacing
+        container.position.x = -totalWidth / 2 + cardWidth / 2
     }
 
     override func handleTouch(at location: CGPoint) -> Bool {
-        guard let content = contentNode else { return false }
+        guard let content = contentNode, let container = cardsContainer else { return false }
+
         let contentLocation = content.convert(location, from: self)
+
+        // Check arrow buttons for navigation
+        if let leftArrow = content.childNode(withName: "leftArrow") {
+            if leftArrow.frame.contains(contentLocation) {
+                scrollBy(amount: cardWidth + spacing)
+                return true
+            }
+        }
+
+        if let rightArrow = content.childNode(withName: "rightArrow") {
+            if rightArrow.frame.contains(contentLocation) {
+                scrollBy(amount: -(cardWidth + spacing))
+                return true
+            }
+        }
+
+        let containerLocation = container.convert(contentLocation, from: content)
 
         // Check each character card
         for charClass in CharacterClass.allCases {
-            if let card = content.childNode(withName: charClass.rawValue) {
-                let cardLocation = card.convert(contentLocation, from: content)
+            if let card = container.childNode(withName: charClass.rawValue) {
+                let cardLocation = card.convert(containerLocation, from: container)
 
                 // Check if touch is within card bounds
                 if abs(cardLocation.x) < cardWidth / 2 && abs(cardLocation.y) < cardHeight / 2 {
                     // Only select if unlocked and not already selected
                     if charClass.isUnlocked && charClass != selectedClass {
                         selectedClass = charClass
-                        rebuildCards(in: content)
+                        rebuildCards(in: container)
                         onSelect?(charClass)
                         return true
                     }
@@ -337,6 +403,28 @@ class CharacterSelectView: SubMenuView {
         }
 
         return false
+    }
+
+    func handleDrag(from startLocation: CGPoint, to currentLocation: CGPoint) {
+        guard let container = cardsContainer else { return }
+
+        let deltaX = currentLocation.x - startLocation.x
+        scrollBy(amount: deltaX * 0.1)  // Dampen the scroll
+    }
+
+    private func scrollBy(amount: CGFloat) {
+        guard let container = cardsContainer else { return }
+
+        let totalWidth = CGFloat(CharacterClass.allCases.count) * (cardWidth + spacing) - spacing
+        let minX = -totalWidth / 2 + cardWidth / 2
+        let maxX = totalWidth / 2 - cardWidth / 2
+
+        var newX = container.position.x + amount
+        newX = max(minX - 50, min(maxX + 50, newX))  // Allow some overscroll
+
+        let moveAction = SKAction.moveTo(x: newX, duration: 0.2)
+        moveAction.timingMode = .easeOut
+        container.run(moveAction)
     }
 
     private func createCharacterCard(_ charClass: CharacterClass, width: CGFloat, height: CGFloat, isSelected: Bool) -> SKNode {

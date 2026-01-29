@@ -241,20 +241,56 @@ class Enemy: SKNode {
     // MARK: - Setup
 
     private func setupVisuals(size: CGFloat, color: SKColor) {
-        // Create detailed monster based on enemy type
+        // SIMPLIFIED VISUALS: Use simple shapes to reduce SKShapeNode count
+        // This improves performance significantly
+        setupSimpleEnemy(size: size, color: color)
+    }
+
+    private func setupSimpleEnemy(size: CGFloat, color: SKColor) {
+        // Simple circle body - much more performant than complex shapes
+        spriteNode = SKShapeNode(circleOfRadius: size / 2)
+        spriteNode.fillColor = color
+        spriteNode.strokeColor = color.withAlphaComponent(0.8)
+        spriteNode.lineWidth = 2
+        addChild(spriteNode)
+
+        // Simple eyes (just 2 small dots)
+        let eyeSize = size * 0.08
+        let eyeY = size * 0.1
+        let eyeSpacing = size * 0.15
+
+        let leftEye = SKShapeNode(circleOfRadius: eyeSize)
+        leftEye.fillColor = .white
+        leftEye.strokeColor = .clear
+        leftEye.position = CGPoint(x: -eyeSpacing, y: eyeY)
+        spriteNode.addChild(leftEye)
+
+        let rightEye = SKShapeNode(circleOfRadius: eyeSize)
+        rightEye.fillColor = .white
+        rightEye.strokeColor = .clear
+        rightEye.position = CGPoint(x: eyeSpacing, y: eyeY)
+        spriteNode.addChild(rightEye)
+
+        // Add type-specific indicator (minimal)
         switch enemyType {
-        case .chaser, .elite, .boss:
-            setupGoblin(size: size)
-        case .swarm:
-            setupBat(size: size)
-        case .ranged:
-            setupSkeletonArcher(size: size)
         case .tank:
-            setupOrc(size: size)
+            // Tanks get a thicker border
+            spriteNode.lineWidth = 4
+        case .ranged:
+            // Ranged gets a small triangle indicator
+            let indicator = SKShapeNode(circleOfRadius: size * 0.12)
+            indicator.fillColor = .white
+            indicator.strokeColor = .clear
+            indicator.position = CGPoint(x: size * 0.3, y: 0)
+            spriteNode.addChild(indicator)
         case .suicide:
-            setupSuicideBomber(size: size)
+            // Suicide gets a warning color pulse (handled elsewhere)
+            spriteNode.glowWidth = 3
         case .buffer:
-            setupBufferMage(size: size)
+            // Buffer gets a subtle glow
+            spriteNode.glowWidth = 5
+        default:
+            break
         }
     }
 

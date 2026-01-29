@@ -408,24 +408,23 @@ class Player: SKNode {
 
         guard lastAttackTime >= attackInterval else { return }
 
-        // Try to find a live enemy first, then any enemy, then use last direction
+        // Always shoot! Find best direction
         if let target = findNearestEnemy(enemies: enemies, includeDead: false) {
             // Found a live enemy - shoot at it
             currentTarget = target
             lastAttackAngle = angleTo(target)
-            lastAttackTime = 0
-            fireProjectilesAtAngle(lastAttackAngle)
         } else if let target = findNearestEnemy(enemies: enemies, includeDead: true) {
             // Only dead enemies - shoot toward where they are
             lastAttackAngle = angleTo(target)
-            lastAttackTime = 0
-            fireProjectilesAtAngle(lastAttackAngle)
-        } else if !enemies.isEmpty {
-            // Enemies exist but can't find any - shoot in last known direction
-            lastAttackTime = 0
-            fireProjectilesAtAngle(lastAttackAngle)
+        } else if movementVector != .zero {
+            // No enemies - shoot in movement direction
+            lastAttackAngle = atan2(movementVector.dy, movementVector.dx)
         }
-        // If no enemies at all, don't shoot (wave transition)
+        // Otherwise keep using lastAttackAngle (previous direction)
+
+        // Always fire!
+        lastAttackTime = 0
+        fireProjectilesAtAngle(lastAttackAngle)
     }
 
     private func findNearestEnemy(enemies: [Enemy], includeDead: Bool) -> Enemy? {

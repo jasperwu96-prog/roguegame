@@ -292,16 +292,25 @@ class UIManager {
     // MARK: - Touch Handling
 
     func handleTouch(at location: CGPoint) -> Bool {
-        // Check pause button
+        guard let scene = scene else { return false }
+
+        // Convert scene coordinates to camera-relative coordinates
+        // The HUD is attached to the camera, so we need camera-relative touch position
+        let cameraLocation = CGPoint(
+            x: location.x - (scene.camera?.position.x ?? 0),
+            y: location.y - (scene.camera?.position.y ?? 0)
+        )
+
+        // Check pause button (using camera-relative coordinates)
         if let pauseButton = hudLayer.childNode(withName: "pauseButton"),
-           pauseButton.contains(location) {
+           pauseButton.frame.contains(cameraLocation) {
             delegate?.pauseButtonPressed()
             return true
         }
 
-        // Check ability buttons
+        // Check ability buttons (using camera-relative coordinates)
         for (type, button) in abilityButtons {
-            if button.contains(button.convert(location, from: hudLayer)) {
+            if button.frame.contains(cameraLocation) {
                 delegate?.abilityButtonPressed(type)
                 return true
             }
@@ -309,9 +318,9 @@ class UIManager {
 
         // Check overlay screens
         if isOverlayActive {
-            upgradeScreen?.handleTouch(at: overlayLayer.convert(location, from: scene!))
-            deathScreen?.handleTouch(at: overlayLayer.convert(location, from: scene!))
-            pauseScreen?.handleTouch(at: overlayLayer.convert(location, from: scene!))
+            upgradeScreen?.handleTouch(at: cameraLocation)
+            deathScreen?.handleTouch(at: cameraLocation)
+            pauseScreen?.handleTouch(at: cameraLocation)
             return true
         }
 

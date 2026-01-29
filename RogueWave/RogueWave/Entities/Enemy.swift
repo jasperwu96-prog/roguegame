@@ -261,6 +261,9 @@ class Enemy: SKNode {
             setupZombieBloater(size: size)
         case .buffer:
             setupZombieScreamer(size: size)
+        case .elite, .boss:
+            // Elite and boss use zombie walker base - visual enhancements added separately
+            setupZombieWalker(size: size)
         }
     }
 

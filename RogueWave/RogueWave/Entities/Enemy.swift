@@ -779,43 +779,17 @@ class Enemy: SKNode {
     }
 
     private func addEliteGlow() {
-        spriteNode.glowWidth = 8
+        // SIMPLIFIED: Just static glow, no animations to reduce action overhead
+        spriteNode.glowWidth = 10
         spriteNode.strokeColor = EnemyConfig.Elite.glowColor
-
-        // Pulsing animation
-        let pulseAction = SKAction.repeatForever(
-            SKAction.sequence([
-                SKAction.run { [weak self] in self?.spriteNode.glowWidth = 12 },
-                SKAction.wait(forDuration: 0.5),
-                SKAction.run { [weak self] in self?.spriteNode.glowWidth = 8 },
-                SKAction.wait(forDuration: 0.5)
-            ])
-        )
-        run(pulseAction, withKey: "elitePulse")
     }
 
     private func addBossEffects() {
-        spriteNode.glowWidth = 15
-        spriteNode.lineWidth = 4
-
-        // Rotating particles around boss
-        let particleCount = 4
-        for i in 0..<particleCount {
-            let particle = SKShapeNode(circleOfRadius: 8)
-            particle.fillColor = SKColor(red: 1.0, green: 0.3, blue: 0.3, alpha: 0.8)
-            particle.strokeColor = .clear
-
-            let angle = CGFloat(i) * (.pi * 2 / CGFloat(particleCount))
-            let radius: CGFloat = 40
-            particle.position = CGPoint(x: cos(angle) * radius, y: sin(angle) * radius)
-
-            addChild(particle)
-
-            // Orbit animation
-            let orbitPath = UIBezierPath(arcCenter: .zero, radius: radius, startAngle: angle, endAngle: angle + .pi * 2, clockwise: true)
-            let orbitAction = SKAction.follow(orbitPath.cgPath, asOffset: false, orientToPath: false, duration: 2.0)
-            particle.run(SKAction.repeatForever(orbitAction))
-        }
+        // SIMPLIFIED: Just larger glow and border, no orbiting particles
+        // The orbiting particles with repeatForever actions were causing performance issues
+        spriteNode.glowWidth = 20
+        spriteNode.lineWidth = 5
+        spriteNode.strokeColor = SKColor.red
     }
 
     // MARK: - Update
@@ -1059,20 +1033,13 @@ class Enemy: SKNode {
         buffedDamageMultiplier = damageMultiplier
         buffedSpeedMultiplier = speedMultiplier
 
-        // Visual buff indicator
+        // Visual buff indicator - SIMPLIFIED: static glow, no animation
         let buffGlow = SKShapeNode(circleOfRadius: spriteNode.frame.width * 0.6)
-        buffGlow.fillColor = SKColor(red: 0.8, green: 0.6, blue: 1.0, alpha: 0.2)
-        buffGlow.strokeColor = SKColor(red: 0.9, green: 0.7, blue: 1.0, alpha: 0.6)
-        buffGlow.lineWidth = 2
+        buffGlow.fillColor = SKColor(red: 0.8, green: 0.6, blue: 1.0, alpha: 0.3)
+        buffGlow.strokeColor = SKColor(red: 0.9, green: 0.7, blue: 1.0, alpha: 0.8)
+        buffGlow.lineWidth = 3
         buffGlow.name = "buffGlow"
         addChild(buffGlow)
-
-        // Pulsing effect
-        let pulse = SKAction.repeatForever(SKAction.sequence([
-            SKAction.scale(to: 1.15, duration: 0.3),
-            SKAction.scale(to: 1.0, duration: 0.3)
-        ]))
-        buffGlow.run(pulse)
 
         // Buff expires after some time
         let expireBuff = SKAction.sequence([

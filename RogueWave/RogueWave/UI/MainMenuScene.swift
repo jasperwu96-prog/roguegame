@@ -253,7 +253,7 @@ class MainMenuScene: SKScene {
 
     private func setupCharacterPreview() {
         let previewContainer = SKNode()
-        previewContainer.position = CGPoint(x: 0, y: 55 * 3)  // Above play button
+        previewContainer.position = CGPoint(x: 0, y: 55 * 3.5)  // Above play button with more space
         menuContainer.addChild(previewContainer)
         characterPreviewContainer = previewContainer
 

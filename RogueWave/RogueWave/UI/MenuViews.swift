@@ -490,7 +490,9 @@ class CharacterSelectView: SubMenuView {
         fatalError("init(coder:) has not been implemented")
     }
 
-    private func rebuildCards(in container: SKNode) {
+    private func rebuildCards(in container: SKNode, preservePosition: Bool = false) {
+        let currentX = container.position.x
+
         // Remove existing cards
         container.removeAllChildren()
 
@@ -502,8 +504,8 @@ class CharacterSelectView: SubMenuView {
             container.addChild(card)
         }
 
-        // Start showing first card (container at 0)
-        container.position.x = 0
+        // Preserve position if requested, otherwise reset to 0
+        container.position.x = preservePosition ? currentX : 0
     }
 
     override func handleTouch(at location: CGPoint) -> Bool {
@@ -522,7 +524,7 @@ class CharacterSelectView: SubMenuView {
                     // Only select if unlocked and not already selected
                     if charClass.isUnlocked && charClass != selectedClass {
                         selectedClass = charClass
-                        rebuildCards(in: container)
+                        rebuildCards(in: container, preservePosition: true)
                         onSelect?(charClass)
                         return true
                     }
@@ -861,88 +863,198 @@ class CharacterSelectView: SubMenuView {
 
 class UpgradesView: SubMenuView {
 
+    private var goldLabel: SKLabelNode?
+    private var upgradeRows: [PermanentUpgrade: SKNode] = [:]
+
     init(size: CGSize) {
         super.init(size: size, title: "META UPGRADES")
 
         let content = createScrollableContent()
 
-        let upgrades: [(String, String, Int, Int)] = [
-            ("Starting Health", "+10% Max HP per level", 1, 5),
-            ("Starting Damage", "+5% Damage per level", 0, 5),
-            ("Starting Speed", "+5% Speed per level", 0, 5),
-            ("XP Bonus", "+10% XP gain per level", 2, 5),
-            ("Gold Bonus", "+15% Gold per level", 0, 5),
-            ("Extra Reroll", "+1 Upgrade reroll per level", 1, 3),
-        ]
+        let itemHeight: CGFloat = 70
+        let upgrades = PermanentUpgrade.allCases
+        let startY: CGFloat = CGFloat(upgrades.count) / 2 * itemHeight - 20
 
-        let itemHeight: CGFloat = 55
-        let startY: CGFloat = CGFloat(upgrades.count) / 2 * itemHeight
-
-        for (index, (name, desc, level, maxLevel)) in upgrades.enumerated() {
+        for (index, upgrade) in upgrades.enumerated() {
             let y = startY - CGFloat(index) * itemHeight
-
-            let row = createUpgradeRow(name: name, description: desc, level: level, maxLevel: maxLevel)
+            let row = createUpgradeRow(for: upgrade)
             row.position = CGPoint(x: 0, y: y)
+            row.name = upgrade.rawValue
             content.addChild(row)
+            upgradeRows[upgrade] = row
         }
 
         // Gold display
-        let goldLabel = SKLabelNode(fontNamed: UIConfig.fontName)
-        goldLabel.text = "Gold: \(GameManager.shared.metaProgression.totalGold)"
-        goldLabel.fontSize = 16
-        goldLabel.fontColor = SKColor(red: 1.0, green: 0.85, blue: 0.3, alpha: 1.0)
-        goldLabel.position = CGPoint(x: 0, y: -startY - 50)
-        content.addChild(goldLabel)
+        let goldBg = SKShapeNode(rectOf: CGSize(width: 140, height: 35), cornerRadius: 17)
+        goldBg.fillColor = SKColor(red: 0.15, green: 0.12, blue: 0.05, alpha: 1.0)
+        goldBg.strokeColor = SKColor(red: 0.6, green: 0.5, blue: 0.2, alpha: 1.0)
+        goldBg.lineWidth = 2
+        goldBg.position = CGPoint(x: 0, y: -startY - 60)
+        content.addChild(goldBg)
+
+        let gold = SKLabelNode(fontNamed: UIConfig.fontName)
+        gold.text = "💰 \(GameManager.shared.metaProgression.totalGold)"
+        gold.fontSize = 16
+        gold.fontColor = SKColor(red: 1.0, green: 0.85, blue: 0.3, alpha: 1.0)
+        gold.verticalAlignmentMode = .center
+        gold.position = CGPoint(x: 0, y: -startY - 60)
+        content.addChild(gold)
+        goldLabel = gold
+
+        // Tap hint
+        let hint = SKLabelNode(fontNamed: UIConfig.fontName)
+        hint.text = "Tap upgrade to purchase"
+        hint.fontSize = 11
+        hint.fontColor = SKColor(white: 0.4, alpha: 1.0)
+        hint.position = CGPoint(x: 0, y: -startY - 95)
+        content.addChild(hint)
     }
 
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 
-    private func createUpgradeRow(name: String, description: String, level: Int, maxLevel: Int) -> SKNode {
+    override func handleTouch(at location: CGPoint) -> Bool {
+        guard let content = contentNode else { return false }
+
+        let contentLocation = content.convert(location, from: self)
+
+        // Check each upgrade row
+        for upgrade in PermanentUpgrade.allCases {
+            if let row = upgradeRows[upgrade] {
+                let rowLocation = row.convert(contentLocation, from: content)
+                if abs(rowLocation.x) < 140 && abs(rowLocation.y) < 35 {
+                    return attemptPurchase(upgrade)
+                }
+            }
+        }
+
+        return false
+    }
+
+    private func attemptPurchase(_ upgrade: PermanentUpgrade) -> Bool {
+        if GameManager.shared.purchaseUpgrade(upgrade) {
+            // Success - update display
+            refreshUpgradeRow(upgrade)
+            goldLabel?.text = "💰 \(GameManager.shared.metaProgression.totalGold)"
+
+            // Visual feedback
+            if let row = upgradeRows[upgrade] {
+                let flash = SKAction.sequence([
+                    SKAction.run { row.alpha = 0.5 },
+                    SKAction.wait(forDuration: 0.1),
+                    SKAction.run { row.alpha = 1.0 }
+                ])
+                row.run(flash)
+            }
+
+            // Refresh all rows to update affordability
+            for otherUpgrade in PermanentUpgrade.allCases {
+                refreshUpgradeRow(otherUpgrade)
+            }
+
+            return true
+        }
+        return false
+    }
+
+    private func refreshUpgradeRow(_ upgrade: PermanentUpgrade) {
+        guard let row = upgradeRows[upgrade], let content = contentNode else { return }
+        let position = row.position
+        row.removeFromParent()
+
+        let newRow = createUpgradeRow(for: upgrade)
+        newRow.position = position
+        newRow.name = upgrade.rawValue
+        content.addChild(newRow)
+        upgradeRows[upgrade] = newRow
+    }
+
+    private func createUpgradeRow(for upgrade: PermanentUpgrade) -> SKNode {
         let row = SKNode()
+        let level = GameManager.shared.getUpgradeLevel(upgrade)
+        let maxLevel = upgrade.maxLevel
+        let isMaxed = level >= maxLevel
+        let canAfford = GameManager.shared.canAffordUpgrade(upgrade)
+        let cost = isMaxed ? 0 : upgrade.cost(forLevel: level)
 
         // Background
-        let bg = SKShapeNode(rectOf: CGSize(width: 280, height: 50), cornerRadius: 8)
-        bg.fillColor = SKColor(red: 0.1, green: 0.12, blue: 0.15, alpha: 1.0)
-        bg.strokeColor = SKColor(white: 0.2, alpha: 1.0)
-        bg.lineWidth = 1
+        let bg = SKShapeNode(rectOf: CGSize(width: 280, height: 65), cornerRadius: 10)
+        if isMaxed {
+            bg.fillColor = SKColor(red: 0.1, green: 0.15, blue: 0.1, alpha: 1.0)
+            bg.strokeColor = SKColor(red: 0.3, green: 0.6, blue: 0.3, alpha: 1.0)
+        } else if canAfford {
+            bg.fillColor = SKColor(red: 0.12, green: 0.12, blue: 0.18, alpha: 1.0)
+            bg.strokeColor = SKColor(red: 0.3, green: 0.5, blue: 0.8, alpha: 1.0)
+        } else {
+            bg.fillColor = SKColor(red: 0.08, green: 0.08, blue: 0.1, alpha: 1.0)
+            bg.strokeColor = SKColor(white: 0.2, alpha: 1.0)
+        }
+        bg.lineWidth = canAfford && !isMaxed ? 2 : 1
         row.addChild(bg)
 
         // Name
         let nameLabel = SKLabelNode(fontNamed: UIConfig.fontName)
-        nameLabel.text = name
-        nameLabel.fontSize = 13
-        nameLabel.fontColor = .white
+        nameLabel.text = upgrade.displayName
+        nameLabel.fontSize = 14
+        nameLabel.fontColor = isMaxed ? SKColor(red: 0.5, green: 0.8, blue: 0.5, alpha: 1.0) : .white
         nameLabel.horizontalAlignmentMode = .left
-        nameLabel.position = CGPoint(x: -130, y: 8)
+        nameLabel.position = CGPoint(x: -125, y: 12)
         row.addChild(nameLabel)
 
         // Description
         let descLabel = SKLabelNode(fontNamed: UIConfig.fontName)
-        descLabel.text = description
-        descLabel.fontSize = 9
+        descLabel.text = upgrade.description
+        descLabel.fontSize = 10
         descLabel.fontColor = SKColor(white: 0.5, alpha: 1.0)
         descLabel.horizontalAlignmentMode = .left
-        descLabel.position = CGPoint(x: -130, y: -10)
+        descLabel.position = CGPoint(x: -125, y: -5)
         row.addChild(descLabel)
 
-        // Level pips - position on right side, inside the box
-        // Box spans -140 to +140, so pips should end around +125
-        let pipSpacing: CGFloat = 14
+        // Cost or MAX label
+        let costLabel = SKLabelNode(fontNamed: UIConfig.fontName)
+        if isMaxed {
+            costLabel.text = "MAX"
+            costLabel.fontColor = SKColor(red: 0.5, green: 0.8, blue: 0.5, alpha: 1.0)
+        } else {
+            costLabel.text = "💰 \(cost)"
+            costLabel.fontColor = canAfford ?
+                SKColor(red: 1.0, green: 0.85, blue: 0.3, alpha: 1.0) :
+                SKColor(red: 0.5, green: 0.4, blue: 0.3, alpha: 1.0)
+        }
+        costLabel.fontSize = 12
+        costLabel.horizontalAlignmentMode = .left
+        costLabel.position = CGPoint(x: -125, y: -22)
+        row.addChild(costLabel)
+
+        // Level pips on right side
+        let pipSpacing: CGFloat = 12
+        let pipSize: CGFloat = 6
         let totalPipWidth = CGFloat(maxLevel - 1) * pipSpacing
-        let startX: CGFloat = 125 - totalPipWidth  // Right-align pips
+        let startX: CGFloat = 125 - totalPipWidth
 
         for i in 0..<maxLevel {
-            let pip = SKShapeNode(circleOfRadius: 5)
+            let pip = SKShapeNode(circleOfRadius: pipSize)
             pip.fillColor = i < level ?
                 SKColor(red: 0.3, green: 0.7, blue: 1.0, alpha: 1.0) :
-                SKColor(white: 0.2, alpha: 1.0)
-            pip.strokeColor = SKColor(white: 0.4, alpha: 1.0)
+                SKColor(white: 0.15, alpha: 1.0)
+            pip.strokeColor = i < level ?
+                SKColor(red: 0.5, green: 0.8, blue: 1.0, alpha: 1.0) :
+                SKColor(white: 0.3, alpha: 1.0)
             pip.lineWidth = 1
             pip.position = CGPoint(x: startX + CGFloat(i) * pipSpacing, y: 0)
+            if i < level { pip.glowWidth = 2 }
             row.addChild(pip)
         }
+
+        // Level text
+        let levelLabel = SKLabelNode(fontNamed: UIConfig.fontName)
+        levelLabel.text = "\(level)/\(maxLevel)"
+        levelLabel.fontSize = 10
+        levelLabel.fontColor = SKColor(white: 0.5, alpha: 1.0)
+        levelLabel.horizontalAlignmentMode = .right
+        levelLabel.position = CGPoint(x: 125, y: -22)
+        row.addChild(levelLabel)
 
         return row
     }

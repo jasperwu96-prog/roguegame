@@ -1072,8 +1072,8 @@ extension GameScene: SKPhysicsContactDelegate {
 
         if projectile.isCritical {
             GameManager.shared.recordCriticalHit()
-            // Screen shake for crits
-            triggerScreenShake(intensity: 4, duration: 0.1)
+            // Screen shake for crits (reduced intensity)
+            triggerScreenShake(intensity: 2, duration: 0.08)
             AudioManager.shared.playSFX(.critHit, on: self)
         } else {
             AudioManager.shared.playSFX(.enemyHit, on: self)
@@ -1223,13 +1223,13 @@ extension GameScene: PlayerDelegate {
         GameManager.shared.recordDamageTaken(Int(amount))
         damageTakenThisWave += amount
 
-        // Enhanced screen shake based on damage
-        let intensity = min(amount / 10, 8)
-        triggerScreenShake(intensity: intensity, duration: 0.15)
+        // Screen shake based on damage (reduced intensity)
+        let intensity = min(amount / 15, 4)
+        triggerScreenShake(intensity: intensity, duration: 0.1)
 
-        // Hit freeze for big hits
-        if amount >= 20 {
-            triggerHitFreeze(duration: 0.04)
+        // Hit freeze for big hits only
+        if amount >= 30 {
+            triggerHitFreeze(duration: 0.03)
         }
 
         // Check close call achievement
@@ -1393,9 +1393,9 @@ extension GameScene: EnemyDelegate {
         if enemy.isBoss {
             bossKillCount += 1
             AchievementManager.shared.checkBossSlayer(bossKillCount: bossKillCount)
-            // Big screen shake for boss kills
-            triggerScreenShake(intensity: 12, duration: 0.3)
-            triggerHitFreeze(duration: 0.1)
+            // Screen shake for boss kills (reduced)
+            triggerScreenShake(intensity: 6, duration: 0.2)
+            triggerHitFreeze(duration: 0.06)
         }
 
         // Grant XP to player

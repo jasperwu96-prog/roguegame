@@ -52,7 +52,7 @@ class AudioManager {
 
     // Haptic throttling - limit to avoid overwhelming the haptic engine
     private var lastHapticTime: TimeInterval = 0
-    private let hapticMinInterval: TimeInterval = 0.05  // Max 20 haptics per second
+    private let hapticMinInterval: TimeInterval = 0.15  // Max ~6 haptics per second
 
     // MARK: - Sound Effect Names
 
@@ -212,15 +212,19 @@ class AudioManager {
     func playSFX(_ sfx: SFX, on node: SKNode) {
         guard isSFXEnabled else { return }
 
-        // Create haptic feedback for important sounds
+        // Create haptic feedback for important sounds only (reduced frequency)
         switch sfx {
-        case .playerHit, .playerDie, .explosion, .critHit:
-            triggerHaptic(style: .heavy)
-        case .enemyHit, .enemyDie, .dash:
+        case .playerHit, .playerDie:
             triggerHaptic(style: .medium)
-        case .playerShoot, .buttonPress, .heal:
+        case .explosion, .critHit:
+            triggerHaptic(style: .light)
+        case .enemyDie:
+            // Only light haptic for enemy deaths, skip for regular hits
+            triggerHaptic(style: .light)
+        case .buttonPress:
             triggerHaptic(style: .light)
         default:
+            // No haptic for playerShoot, enemyHit, dash, heal to reduce frequency
             break
         }
 

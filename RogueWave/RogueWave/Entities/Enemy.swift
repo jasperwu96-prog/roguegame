@@ -1302,38 +1302,30 @@ class Enemy: SKNode {
         isDead = true
         isActive = false
         physicsBody?.categoryBitMask = GameConfig.PhysicsCategory.none
+        physicsBody = nil  // Remove physics body entirely
 
-        // Remove specific repeatForever action keys on self to prevent memory leaks
-        // Don't use removeAllActions() on self as it breaks the death animation
-        removeAction(forKey: "elitePulse")
-        removeAction(forKey: "shoot")
-        removeAction(forKey: "chargeWarning")
-        removeAction(forKey: "suicideFuse")
-        removeAction(forKey: "buffPulse")
-        removeAction(forKey: "buffExpire")
-        removeAction(forKey: "chargeAttack")
+        // AGGRESSIVE CLEANUP: Remove ALL actions from self and ALL children
+        // This prevents any repeatForever actions from continuing to run
+        removeAllActions()
+        removeAllActionsRecursively(from: self)
 
-        // CRITICAL: Remove ALL actions from child nodes to prevent memory leaks
-        // Many repeatForever actions run on children (wings, orbs, particles, etc.)
-        removeAllActionsRecursively(from: spriteNode)
-
-        // Also clean up buff glow and boss particles which are direct children
-        for child in children {
-            if child != spriteNode {
-                removeAllActionsRecursively(from: child)
-            }
+        // Remove all children except spriteNode (we need it for the death visual)
+        for child in children where child !== spriteNode {
+            child.removeFromParent()
         }
 
-        // Death animation - notify delegate, then remove from scene
+        // Clear all children of spriteNode (wings, eyes, etc.) to simplify death
+        spriteNode.removeAllChildren()
+
+        // Notify delegate immediately (before animation)
+        delegate?.enemyDidDie(self)
+
+        // Simple death animation on spriteNode only
         let deathAction = SKAction.sequence([
             SKAction.group([
                 SKAction.scale(to: 1.3, duration: 0.1),
-                SKAction.fadeOut(withDuration: 0.2)
+                SKAction.fadeOut(withDuration: 0.15)
             ]),
-            SKAction.run { [weak self] in
-                guard let self = self else { return }
-                self.delegate?.enemyDidDie(self)
-            },
             SKAction.removeFromParent()
         ])
         run(deathAction)

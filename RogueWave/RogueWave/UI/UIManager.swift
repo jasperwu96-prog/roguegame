@@ -385,11 +385,13 @@ extension UIManager: DeathScreenDelegate {
 extension UIManager: PauseScreenDelegate {
     func resumeTapped() {
         hidePauseScreen()
+        delegate?.pauseButtonPressed()  // This will call resumeGame() in GameScene
     }
 
     func quitTapped() {
         hidePauseScreen()
-        delegate?.mainMenuButtonPressed()
+        delegate?.pauseButtonPressed()  // Unpause first
+        delegate?.restartButtonPressed()  // Then restart
     }
 }
 
@@ -878,9 +880,12 @@ class PauseScreen: SKNode {
     }
 
     func handleTouch(at location: CGPoint) {
-        if resumeButton.contains(location) {
+        // Convert to local coordinates and check button frames
+        let localLocation = convert(location, from: parent ?? self)
+
+        if resumeButton.frame.contains(localLocation) {
             delegate?.resumeTapped()
-        } else if quitButton.contains(location) {
+        } else if quitButton.frame.contains(localLocation) {
             delegate?.quitTapped()
         }
     }

@@ -652,11 +652,19 @@ class GameScene: SKScene {
     private func updateProjectiles(deltaTime: TimeInterval) {
         var projectilesToRemove: [Projectile] = []
 
+        // Create bounds around player for projectile cleanup (not scene origin)
+        let projectileBounds = CGRect(
+            x: player.position.x - size.width,
+            y: player.position.y - size.height,
+            width: size.width * 2,
+            height: size.height * 2
+        )
+
         for projectile in projectiles {
             projectile.update(deltaTime: deltaTime, enemies: projectile.isPlayerProjectile ? enemies : nil)
 
-            // Check bounds
-            if !projectile.isActive || projectile.isOutOfBounds(bounds: frame) {
+            // Check bounds relative to player, not scene origin
+            if !projectile.isActive || projectile.isOutOfBounds(bounds: projectileBounds) {
                 projectilesToRemove.append(projectile)
             }
         }

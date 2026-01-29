@@ -934,6 +934,15 @@ class Player: SKNode {
             isCrit = true
         }
 
+        // Convert character class to projectile style
+        let projectileStyle: ProjectileStyle
+        switch characterClass {
+        case .knight: projectileStyle = .knight
+        case .rogue: projectileStyle = .rogue
+        case .mage: projectileStyle = .mage
+        case .berserker: projectileStyle = .berserker
+        }
+
         let projectile = Projectile(
             damage: damage,
             speed: stats.projectileSpeed,
@@ -941,7 +950,8 @@ class Player: SKNode {
             isPlayerProjectile: true,
             piercing: stats.hasPiercing,
             homing: stats.hasHoming,
-            isCritical: isCrit
+            isCritical: isCrit,
+            style: projectileStyle
         )
 
         projectile.position = position

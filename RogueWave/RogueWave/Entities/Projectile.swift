@@ -9,6 +9,15 @@ import SpriteKit
 
 // MARK: - Projectile Class
 
+// Character class enum for projectile styling
+enum ProjectileStyle: String {
+    case knight
+    case rogue
+    case mage
+    case berserker
+    case enemy
+}
+
 class Projectile: SKNode {
 
     // MARK: - Properties
@@ -22,6 +31,7 @@ class Projectile: SKNode {
     let piercing: Bool
     let homing: Bool
     let isCritical: Bool
+    let style: ProjectileStyle
 
     var isActive: Bool = true
     var hitCount: Int = 0
@@ -37,7 +47,8 @@ class Projectile: SKNode {
     // MARK: - Initialization
 
     init(damage: CGFloat, speed: CGFloat, angle: CGFloat, isPlayerProjectile: Bool,
-         piercing: Bool = false, homing: Bool = false, isCritical: Bool = false) {
+         piercing: Bool = false, homing: Bool = false, isCritical: Bool = false,
+         style: ProjectileStyle = .knight) {
 
         self.damage = damage
         self.moveSpeed = speed
@@ -46,6 +57,7 @@ class Projectile: SKNode {
         self.piercing = piercing
         self.homing = homing
         self.isCritical = isCritical
+        self.style = isPlayerProjectile ? style : .enemy
 
         super.init()
 
@@ -61,17 +73,87 @@ class Projectile: SKNode {
     // MARK: - Setup
 
     private func setupVisuals() {
-        // Create projectile shape based on type
-        if isPlayerProjectile {
-            // Player projectile - glowing circle
-            spriteNode = SKShapeNode(circleOfRadius: isCritical ? 8 : 6)
+        // Create projectile shape based on character style
+        switch style {
+        case .knight:
+            // Knight: Blue energy orb with shield-like ring
+            let baseSize: CGFloat = isCritical ? 8 : 6
+            spriteNode = SKShapeNode(circleOfRadius: baseSize)
             spriteNode.fillColor = isCritical ?
                 SKColor(red: 1.0, green: 0.9, blue: 0.3, alpha: 1.0) :
-                SKColor(red: 0.3, green: 0.8, blue: 1.0, alpha: 1.0)
+                SKColor(red: 0.3, green: 0.6, blue: 1.0, alpha: 1.0)
             spriteNode.strokeColor = SKColor.white
-            spriteNode.lineWidth = 1
+            spriteNode.lineWidth = 2
             spriteNode.glowWidth = isCritical ? 8 : 4
-        } else {
+
+        case .rogue:
+            // Rogue: Green dagger/arrow shape
+            let size: CGFloat = isCritical ? 14 : 10
+            let path = CGMutablePath()
+            path.move(to: CGPoint(x: 0, y: size / 2))
+            path.addLine(to: CGPoint(x: size / 4, y: -size / 4))
+            path.addLine(to: CGPoint(x: 0, y: -size / 2))
+            path.addLine(to: CGPoint(x: -size / 4, y: -size / 4))
+            path.closeSubpath()
+            spriteNode = SKShapeNode(path: path)
+            spriteNode.fillColor = isCritical ?
+                SKColor(red: 1.0, green: 0.9, blue: 0.3, alpha: 1.0) :
+                SKColor(red: 0.3, green: 0.9, blue: 0.4, alpha: 1.0)
+            spriteNode.strokeColor = SKColor(red: 0.5, green: 1.0, blue: 0.6, alpha: 0.8)
+            spriteNode.lineWidth = 1
+            spriteNode.glowWidth = isCritical ? 6 : 3
+
+        case .mage:
+            // Mage: Purple star/magic bolt
+            let size: CGFloat = isCritical ? 10 : 7
+            let path = CGMutablePath()
+            for i in 0..<5 {
+                let outerAngle = CGFloat(i) * .pi * 2 / 5 - .pi / 2
+                let innerAngle = outerAngle + .pi / 5
+                let outerPoint = CGPoint(x: cos(outerAngle) * size, y: sin(outerAngle) * size)
+                let innerPoint = CGPoint(x: cos(innerAngle) * size * 0.4, y: sin(innerAngle) * size * 0.4)
+                if i == 0 {
+                    path.move(to: outerPoint)
+                } else {
+                    path.addLine(to: outerPoint)
+                }
+                path.addLine(to: innerPoint)
+            }
+            path.closeSubpath()
+            spriteNode = SKShapeNode(path: path)
+            spriteNode.fillColor = isCritical ?
+                SKColor(red: 1.0, green: 0.9, blue: 0.3, alpha: 1.0) :
+                SKColor(red: 0.7, green: 0.3, blue: 1.0, alpha: 1.0)
+            spriteNode.strokeColor = SKColor(red: 0.9, green: 0.6, blue: 1.0, alpha: 0.8)
+            spriteNode.lineWidth = 1
+            spriteNode.glowWidth = isCritical ? 10 : 6
+
+        case .berserker:
+            // Berserker: Red/orange flame-like projectile
+            let size: CGFloat = isCritical ? 12 : 8
+            let path = CGMutablePath()
+            path.move(to: CGPoint(x: 0, y: size * 0.6))
+            path.addCurve(
+                to: CGPoint(x: size * 0.4, y: -size * 0.3),
+                control1: CGPoint(x: size * 0.5, y: size * 0.4),
+                control2: CGPoint(x: size * 0.5, y: 0)
+            )
+            path.addLine(to: CGPoint(x: 0, y: -size * 0.5))
+            path.addLine(to: CGPoint(x: -size * 0.4, y: -size * 0.3))
+            path.addCurve(
+                to: CGPoint(x: 0, y: size * 0.6),
+                control1: CGPoint(x: -size * 0.5, y: 0),
+                control2: CGPoint(x: -size * 0.5, y: size * 0.4)
+            )
+            spriteNode = SKShapeNode(path: path)
+            spriteNode.fillColor = isCritical ?
+                SKColor(red: 1.0, green: 0.9, blue: 0.3, alpha: 1.0) :
+                SKColor(red: 1.0, green: 0.4, blue: 0.2, alpha: 1.0)
+            spriteNode.strokeColor = SKColor(red: 1.0, green: 0.7, blue: 0.3, alpha: 0.8)
+            spriteNode.lineWidth = 1
+            spriteNode.glowWidth = isCritical ? 8 : 5
+
+        case .enemy:
             // Enemy projectile - red diamond
             let size: CGFloat = 10
             let path = CGMutablePath()
@@ -80,7 +162,6 @@ class Projectile: SKNode {
             path.addLine(to: CGPoint(x: 0, y: -size / 2))
             path.addLine(to: CGPoint(x: -size / 2, y: 0))
             path.closeSubpath()
-
             spriteNode = SKShapeNode(path: path)
             spriteNode.fillColor = SKColor(red: 1.0, green: 0.3, blue: 0.3, alpha: 1.0)
             spriteNode.strokeColor = SKColor.white.withAlphaComponent(0.5)

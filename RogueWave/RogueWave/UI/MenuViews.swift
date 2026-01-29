@@ -488,7 +488,7 @@ class CharacterSelectView: SubMenuView {
 
         // Stats display at top
         let stats = SKNode()
-        stats.position = CGPoint(x: 0, y: cardHeight / 2 + 60)
+        stats.position = CGPoint(x: 0, y: cardHeight / 2 + 55)
         content.addChild(stats)
         statsContainer = stats
         updateStatsDisplay()
@@ -500,14 +500,6 @@ class CharacterSelectView: SubMenuView {
         cardsContainer = container
 
         rebuildCards(in: container)
-
-        // Add hint
-        let hint = SKLabelNode(fontNamed: UIConfig.fontName)
-        hint.text = "← Swipe to browse →"
-        hint.fontSize = 11
-        hint.fontColor = SKColor(white: 0.45, alpha: 1.0)
-        hint.position = CGPoint(x: 0, y: -cardHeight / 2 - 30)
-        content.addChild(hint)
     }
 
     private func updateStatsDisplay() {
@@ -516,44 +508,65 @@ class CharacterSelectView: SubMenuView {
 
         let charClass = selectedClass
 
-        // Title
-        let title = SKLabelNode(fontNamed: UIConfig.fontName)
-        title.text = charClass.rawValue.uppercased()
-        title.fontSize = 20
-        title.fontColor = charClass.color
-        title.position = CGPoint(x: 0, y: 25)
-        stats.addChild(title)
+        // Background panel for stats
+        let statsBg = SKShapeNode(rectOf: CGSize(width: 280, height: 50), cornerRadius: 10)
+        statsBg.fillColor = charClass.color.withAlphaComponent(0.15)
+        statsBg.strokeColor = charClass.color.withAlphaComponent(0.4)
+        statsBg.lineWidth = 1
+        statsBg.position = CGPoint(x: 0, y: 0)
+        stats.addChild(statsBg)
 
-        // Stats based on character
-        let statsList: [(String, String)]
+        // Stats based on character - use icons/colored values
+        let statsList: [(String, String, SKColor)]
         switch charClass {
         case .knight:
-            statsList = [("HP", "100%"), ("DMG", "100%"), ("SPD", "100%"), ("Ability", "Shield")]
+            statsList = [
+                ("❤️", "100%", SKColor(red: 1.0, green: 0.4, blue: 0.4, alpha: 1.0)),
+                ("⚔️", "100%", SKColor(red: 1.0, green: 0.8, blue: 0.3, alpha: 1.0)),
+                ("💨", "100%", SKColor(red: 0.4, green: 0.8, blue: 1.0, alpha: 1.0)),
+                ("🛡️", "Shield", SKColor(red: 0.5, green: 0.7, blue: 1.0, alpha: 1.0))
+            ]
         case .rogue:
-            statsList = [("HP", "80%"), ("DMG", "100%"), ("SPD", "130%"), ("Crit", "+20%")]
+            statsList = [
+                ("❤️", "80%", SKColor(red: 1.0, green: 0.4, blue: 0.4, alpha: 1.0)),
+                ("⚔️", "100%", SKColor(red: 1.0, green: 0.8, blue: 0.3, alpha: 1.0)),
+                ("💨", "130%", SKColor(red: 0.3, green: 1.0, blue: 0.5, alpha: 1.0)),
+                ("💥", "+20%", SKColor(red: 1.0, green: 0.6, blue: 0.2, alpha: 1.0))
+            ]
         case .mage:
-            statsList = [("HP", "70%"), ("DMG", "120%"), ("SPD", "90%"), ("Cooldown", "-30%")]
+            statsList = [
+                ("❤️", "70%", SKColor(red: 1.0, green: 0.4, blue: 0.4, alpha: 1.0)),
+                ("⚔️", "120%", SKColor(red: 0.3, green: 1.0, blue: 0.5, alpha: 1.0)),
+                ("💨", "90%", SKColor(red: 0.4, green: 0.8, blue: 1.0, alpha: 1.0)),
+                ("⏱️", "-30%", SKColor(red: 0.8, green: 0.5, blue: 1.0, alpha: 1.0))
+            ]
         case .berserker:
-            statsList = [("HP", "70%"), ("DMG", "150%"), ("SPD", "100%"), ("Lifesteal", "10%")]
+            statsList = [
+                ("❤️", "70%", SKColor(red: 1.0, green: 0.4, blue: 0.4, alpha: 1.0)),
+                ("⚔️", "150%", SKColor(red: 0.3, green: 1.0, blue: 0.5, alpha: 1.0)),
+                ("💨", "100%", SKColor(red: 0.4, green: 0.8, blue: 1.0, alpha: 1.0)),
+                ("🩸", "10%", SKColor(red: 1.0, green: 0.3, blue: 0.4, alpha: 1.0))
+            ]
         }
 
-        let statSpacing: CGFloat = 70
+        let statSpacing: CGFloat = 68
         let startX = -statSpacing * 1.5
-        for (index, (label, value)) in statsList.enumerated() {
+        for (index, (icon, value, color)) in statsList.enumerated() {
             let x = startX + CGFloat(index) * statSpacing
 
-            let labelNode = SKLabelNode(fontNamed: UIConfig.fontName)
-            labelNode.text = label
-            labelNode.fontSize = 10
-            labelNode.fontColor = SKColor(white: 0.5, alpha: 1.0)
-            labelNode.position = CGPoint(x: x, y: 0)
-            stats.addChild(labelNode)
+            // Icon
+            let iconNode = SKLabelNode(fontNamed: UIConfig.fontName)
+            iconNode.text = icon
+            iconNode.fontSize = 16
+            iconNode.position = CGPoint(x: x, y: 6)
+            stats.addChild(iconNode)
 
+            // Value with color
             let valueNode = SKLabelNode(fontNamed: UIConfig.fontName)
             valueNode.text = value
-            valueNode.fontSize = 12
-            valueNode.fontColor = .white
-            valueNode.position = CGPoint(x: x, y: -18)
+            valueNode.fontSize = 11
+            valueNode.fontColor = color
+            valueNode.position = CGPoint(x: x, y: -14)
             stats.addChild(valueNode)
         }
     }
@@ -965,28 +978,28 @@ class UpgradesView: SubMenuView {
 
         let content = createScrollableContent()
 
-        // Gold display at top
+        // Gold display at top right
         let goldContainer = SKNode()
-        goldContainer.position = CGPoint(x: 0, y: 180)
+        goldContainer.position = CGPoint(x: 85, y: 195)
         content.addChild(goldContainer)
 
-        let goldBg = SKShapeNode(rectOf: CGSize(width: 140, height: 36), cornerRadius: 18)
+        let goldBg = SKShapeNode(rectOf: CGSize(width: 100, height: 28), cornerRadius: 14)
         goldBg.fillColor = SKColor(red: 0.15, green: 0.12, blue: 0.05, alpha: 1.0)
-        goldBg.strokeColor = SKColor(red: 0.8, green: 0.6, blue: 0.2, alpha: 1.0)
-        goldBg.lineWidth = 2
+        goldBg.strokeColor = SKColor(red: 0.7, green: 0.55, blue: 0.2, alpha: 1.0)
+        goldBg.lineWidth = 1.5
         goldContainer.addChild(goldBg)
 
         let gold = SKLabelNode(fontNamed: UIConfig.fontName)
         gold.text = "💰 \(GameManager.shared.metaProgression.totalGold)"
-        gold.fontSize = 16
+        gold.fontSize = 13
         gold.fontColor = SKColor(red: 1.0, green: 0.85, blue: 0.3, alpha: 1.0)
         gold.verticalAlignmentMode = .center
         goldContainer.addChild(gold)
         goldLabel = gold
 
-        let itemHeight: CGFloat = 55
+        let itemHeight: CGFloat = 52
         let upgrades = PermanentUpgrade.allCases
-        let startY: CGFloat = 140
+        let startY: CGFloat = 155
 
         for (index, upgrade) in upgrades.enumerated() {
             let y = startY - CGFloat(index) * itemHeight

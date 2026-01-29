@@ -82,10 +82,10 @@ class StatsView: SubMenuView {
         let lineHeight: CGFloat = 35
 
         let statsData: [(String, String)] = [
-            ("Total Runs", "\(stats.getTotalRuns())"),
-            ("Best Wave", "\(stats.getHighestWave())"),
-            ("Total Kills", "\(stats.getTotalKills())"),
-            ("Total Gold", "\(stats.getTotalGold())"),
+            ("Total Runs", "\(stats.metaProgression.totalRuns)"),
+            ("Best Wave", "\(stats.metaProgression.highestWave)"),
+            ("Total Kills", "\(stats.metaProgression.totalKills)"),
+            ("Total Gold", "\(stats.metaProgression.totalGold)"),
             ("Best Kills (Run)", "\(stats.currentRunStats.enemiesKilled)"),
             ("Total Damage Dealt", "\(Int(stats.currentRunStats.damageDealt))"),
             ("Total Time Played", formatTime(stats.currentRunStats.timeSurvived)),
@@ -257,9 +257,9 @@ enum CharacterClass: String, CaseIterable {
     var isUnlocked: Bool {
         switch self {
         case .knight: return true
-        case .rogue: return GameManager.shared.getHighestWave() >= 5
-        case .mage: return GameManager.shared.getHighestWave() >= 10
-        case .berserker: return GameManager.shared.getHighestWave() >= 15
+        case .rogue: return GameManager.shared.metaProgression.highestWave >= 5
+        case .mage: return GameManager.shared.metaProgression.highestWave >= 10
+        case .berserker: return GameManager.shared.metaProgression.highestWave >= 15
         }
     }
 
@@ -408,7 +408,7 @@ class UpgradesView: SubMenuView {
 
         // Gold display
         let goldLabel = SKLabelNode(fontNamed: UIConfig.fontName)
-        goldLabel.text = "Gold: \(GameManager.shared.getTotalGold())"
+        goldLabel.text = "Gold: \(GameManager.shared.metaProgression.totalGold)"
         goldLabel.fontSize = 16
         goldLabel.fontColor = SKColor(red: 1.0, green: 0.85, blue: 0.3, alpha: 1.0)
         goldLabel.position = CGPoint(x: 0, y: -startY - 50)

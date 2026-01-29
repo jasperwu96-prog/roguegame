@@ -168,40 +168,323 @@ class Enemy: SKNode {
     // MARK: - Setup
 
     private func setupVisuals(size: CGFloat, color: SKColor) {
-        // Create sprite based on enemy type
+        // Create detailed monster based on enemy type
         switch enemyType {
         case .chaser, .elite, .boss:
-            // Triangle shape for chasers
-            let path = CGMutablePath()
-            path.move(to: CGPoint(x: 0, y: size / 2))
-            path.addLine(to: CGPoint(x: -size / 2, y: -size / 2))
-            path.addLine(to: CGPoint(x: size / 2, y: -size / 2))
-            path.closeSubpath()
-            spriteNode = SKShapeNode(path: path)
-
+            setupGoblin(size: size)
         case .swarm:
-            // Small circle for swarm
-            spriteNode = SKShapeNode(circleOfRadius: size / 2)
-
+            setupBat(size: size)
         case .ranged:
-            // Diamond shape for ranged
-            let path = CGMutablePath()
-            path.move(to: CGPoint(x: 0, y: size / 2))
-            path.addLine(to: CGPoint(x: size / 2, y: 0))
-            path.addLine(to: CGPoint(x: 0, y: -size / 2))
-            path.addLine(to: CGPoint(x: -size / 2, y: 0))
-            path.closeSubpath()
-            spriteNode = SKShapeNode(path: path)
-
+            setupSkeletonArcher(size: size)
         case .tank:
-            // Square shape for tank
-            spriteNode = SKShapeNode(rectOf: CGSize(width: size, height: size), cornerRadius: 5)
+            setupOrc(size: size)
         }
+    }
 
-        spriteNode.fillColor = color
-        spriteNode.strokeColor = SKColor.white.withAlphaComponent(0.5)
+    private func setupGoblin(size: CGFloat) {
+        // Goblin body - hunched creature
+        let bodyPath = CGMutablePath()
+        bodyPath.move(to: CGPoint(x: -size * 0.3, y: -size * 0.4))
+        bodyPath.addLine(to: CGPoint(x: -size * 0.35, y: 0))
+        bodyPath.addLine(to: CGPoint(x: -size * 0.2, y: size * 0.2))
+        bodyPath.addLine(to: CGPoint(x: size * 0.2, y: size * 0.2))
+        bodyPath.addLine(to: CGPoint(x: size * 0.35, y: 0))
+        bodyPath.addLine(to: CGPoint(x: size * 0.3, y: -size * 0.4))
+        bodyPath.closeSubpath()
+
+        spriteNode = SKShapeNode(path: bodyPath)
+        spriteNode.fillColor = SKColor(red: 0.3, green: 0.5, blue: 0.2, alpha: 1.0) // Green goblin
+        spriteNode.strokeColor = SKColor(red: 0.2, green: 0.35, blue: 0.15, alpha: 1.0)
         spriteNode.lineWidth = 2
         addChild(spriteNode)
+
+        // Head
+        let head = SKShapeNode(circleOfRadius: size * 0.25)
+        head.fillColor = SKColor(red: 0.35, green: 0.55, blue: 0.25, alpha: 1.0)
+        head.strokeColor = SKColor(red: 0.2, green: 0.35, blue: 0.15, alpha: 1.0)
+        head.lineWidth = 1
+        head.position = CGPoint(x: 0, y: size * 0.15)
+        spriteNode.addChild(head)
+
+        // Pointy ears
+        let leftEar = SKShapeNode(ellipseOf: CGSize(width: size * 0.15, height: size * 0.3))
+        leftEar.fillColor = SKColor(red: 0.35, green: 0.55, blue: 0.25, alpha: 1.0)
+        leftEar.strokeColor = .clear
+        leftEar.position = CGPoint(x: -size * 0.25, y: size * 0.1)
+        leftEar.zRotation = 0.5
+        head.addChild(leftEar)
+
+        let rightEar = SKShapeNode(ellipseOf: CGSize(width: size * 0.15, height: size * 0.3))
+        rightEar.fillColor = SKColor(red: 0.35, green: 0.55, blue: 0.25, alpha: 1.0)
+        rightEar.strokeColor = .clear
+        rightEar.position = CGPoint(x: size * 0.25, y: size * 0.1)
+        rightEar.zRotation = -0.5
+        head.addChild(rightEar)
+
+        // Evil eyes
+        let leftEye = SKShapeNode(circleOfRadius: size * 0.06)
+        leftEye.fillColor = SKColor.red
+        leftEye.strokeColor = .clear
+        leftEye.position = CGPoint(x: -size * 0.1, y: 0)
+        leftEye.glowWidth = 2
+        head.addChild(leftEye)
+
+        let rightEye = SKShapeNode(circleOfRadius: size * 0.06)
+        rightEye.fillColor = SKColor.red
+        rightEye.strokeColor = .clear
+        rightEye.position = CGPoint(x: size * 0.1, y: 0)
+        rightEye.glowWidth = 2
+        head.addChild(rightEye)
+
+        // Mouth with fangs
+        let mouth = SKShapeNode(rectOf: CGSize(width: size * 0.15, height: size * 0.05))
+        mouth.fillColor = SKColor(red: 0.2, green: 0.1, blue: 0.1, alpha: 1.0)
+        mouth.strokeColor = .clear
+        mouth.position = CGPoint(x: 0, y: -size * 0.12)
+        head.addChild(mouth)
+    }
+
+    private func setupBat(size: CGFloat) {
+        // Bat body
+        let body = SKShapeNode(ellipseOf: CGSize(width: size * 0.5, height: size * 0.6))
+        body.fillColor = SKColor(red: 0.15, green: 0.1, blue: 0.2, alpha: 1.0)
+        body.strokeColor = SKColor(red: 0.25, green: 0.15, blue: 0.3, alpha: 1.0)
+        body.lineWidth = 1
+
+        spriteNode = body
+        addChild(spriteNode)
+
+        // Left wing
+        let leftWingPath = CGMutablePath()
+        leftWingPath.move(to: CGPoint(x: -size * 0.15, y: 0))
+        leftWingPath.addQuadCurve(to: CGPoint(x: -size * 0.5, y: size * 0.1),
+                                   control: CGPoint(x: -size * 0.35, y: size * 0.25))
+        leftWingPath.addQuadCurve(to: CGPoint(x: -size * 0.4, y: -size * 0.15),
+                                   control: CGPoint(x: -size * 0.55, y: -size * 0.1))
+        leftWingPath.addQuadCurve(to: CGPoint(x: -size * 0.15, y: -size * 0.1),
+                                   control: CGPoint(x: -size * 0.25, y: -size * 0.2))
+        leftWingPath.closeSubpath()
+
+        let leftWing = SKShapeNode(path: leftWingPath)
+        leftWing.fillColor = SKColor(red: 0.2, green: 0.12, blue: 0.25, alpha: 0.9)
+        leftWing.strokeColor = SKColor(red: 0.3, green: 0.2, blue: 0.35, alpha: 1.0)
+        leftWing.lineWidth = 1
+        spriteNode.addChild(leftWing)
+
+        // Right wing (mirrored)
+        let rightWingPath = CGMutablePath()
+        rightWingPath.move(to: CGPoint(x: size * 0.15, y: 0))
+        rightWingPath.addQuadCurve(to: CGPoint(x: size * 0.5, y: size * 0.1),
+                                    control: CGPoint(x: size * 0.35, y: size * 0.25))
+        rightWingPath.addQuadCurve(to: CGPoint(x: size * 0.4, y: -size * 0.15),
+                                    control: CGPoint(x: size * 0.55, y: -size * 0.1))
+        rightWingPath.addQuadCurve(to: CGPoint(x: size * 0.15, y: -size * 0.1),
+                                    control: CGPoint(x: size * 0.25, y: -size * 0.2))
+        rightWingPath.closeSubpath()
+
+        let rightWing = SKShapeNode(path: rightWingPath)
+        rightWing.fillColor = SKColor(red: 0.2, green: 0.12, blue: 0.25, alpha: 0.9)
+        rightWing.strokeColor = SKColor(red: 0.3, green: 0.2, blue: 0.35, alpha: 1.0)
+        rightWing.lineWidth = 1
+        spriteNode.addChild(rightWing)
+
+        // Eyes
+        let leftEye = SKShapeNode(circleOfRadius: size * 0.08)
+        leftEye.fillColor = SKColor.yellow
+        leftEye.strokeColor = .clear
+        leftEye.position = CGPoint(x: -size * 0.1, y: size * 0.1)
+        leftEye.glowWidth = 2
+        spriteNode.addChild(leftEye)
+
+        let rightEye = SKShapeNode(circleOfRadius: size * 0.08)
+        rightEye.fillColor = SKColor.yellow
+        rightEye.strokeColor = .clear
+        rightEye.position = CGPoint(x: size * 0.1, y: size * 0.1)
+        rightEye.glowWidth = 2
+        spriteNode.addChild(rightEye)
+
+        // Fangs
+        let leftFang = SKShapeNode(rectOf: CGSize(width: size * 0.04, height: size * 0.12))
+        leftFang.fillColor = SKColor.white
+        leftFang.strokeColor = .clear
+        leftFang.position = CGPoint(x: -size * 0.06, y: -size * 0.15)
+        spriteNode.addChild(leftFang)
+
+        let rightFang = SKShapeNode(rectOf: CGSize(width: size * 0.04, height: size * 0.12))
+        rightFang.fillColor = SKColor.white
+        rightFang.strokeColor = .clear
+        rightFang.position = CGPoint(x: size * 0.06, y: -size * 0.15)
+        spriteNode.addChild(rightFang)
+
+        // Wing flap animation
+        let flapUp = SKAction.scaleY(to: 1.1, duration: 0.15)
+        let flapDown = SKAction.scaleY(to: 0.9, duration: 0.15)
+        let flapSequence = SKAction.sequence([flapUp, flapDown])
+        leftWing.run(SKAction.repeatForever(flapSequence))
+        rightWing.run(SKAction.repeatForever(flapSequence))
+    }
+
+    private func setupSkeletonArcher(size: CGFloat) {
+        // Skeleton body (ribcage shape)
+        let bodyPath = CGMutablePath()
+        bodyPath.move(to: CGPoint(x: -size * 0.25, y: -size * 0.35))
+        bodyPath.addLine(to: CGPoint(x: -size * 0.2, y: size * 0.1))
+        bodyPath.addLine(to: CGPoint(x: 0, y: size * 0.15))
+        bodyPath.addLine(to: CGPoint(x: size * 0.2, y: size * 0.1))
+        bodyPath.addLine(to: CGPoint(x: size * 0.25, y: -size * 0.35))
+        bodyPath.closeSubpath()
+
+        spriteNode = SKShapeNode(path: bodyPath)
+        spriteNode.fillColor = SKColor(red: 0.85, green: 0.8, blue: 0.7, alpha: 1.0) // Bone color
+        spriteNode.strokeColor = SKColor(red: 0.6, green: 0.55, blue: 0.5, alpha: 1.0)
+        spriteNode.lineWidth = 2
+        addChild(spriteNode)
+
+        // Skull
+        let skull = SKShapeNode(circleOfRadius: size * 0.22)
+        skull.fillColor = SKColor(red: 0.9, green: 0.85, blue: 0.75, alpha: 1.0)
+        skull.strokeColor = SKColor(red: 0.6, green: 0.55, blue: 0.5, alpha: 1.0)
+        skull.lineWidth = 1
+        skull.position = CGPoint(x: 0, y: size * 0.25)
+        spriteNode.addChild(skull)
+
+        // Eye sockets (dark)
+        let leftSocket = SKShapeNode(circleOfRadius: size * 0.07)
+        leftSocket.fillColor = SKColor(red: 0.1, green: 0.05, blue: 0.15, alpha: 1.0)
+        leftSocket.strokeColor = .clear
+        leftSocket.position = CGPoint(x: -size * 0.1, y: size * 0.03)
+        skull.addChild(leftSocket)
+
+        let rightSocket = SKShapeNode(circleOfRadius: size * 0.07)
+        rightSocket.fillColor = SKColor(red: 0.1, green: 0.05, blue: 0.15, alpha: 1.0)
+        rightSocket.strokeColor = .clear
+        rightSocket.position = CGPoint(x: size * 0.1, y: size * 0.03)
+        skull.addChild(rightSocket)
+
+        // Glowing eyes inside sockets
+        let leftGlow = SKShapeNode(circleOfRadius: size * 0.03)
+        leftGlow.fillColor = SKColor(red: 0.5, green: 0.2, blue: 0.8, alpha: 1.0)
+        leftGlow.strokeColor = .clear
+        leftGlow.glowWidth = 3
+        leftSocket.addChild(leftGlow)
+
+        let rightGlow = SKShapeNode(circleOfRadius: size * 0.03)
+        rightGlow.fillColor = SKColor(red: 0.5, green: 0.2, blue: 0.8, alpha: 1.0)
+        rightGlow.strokeColor = .clear
+        rightGlow.glowWidth = 3
+        rightSocket.addChild(rightGlow)
+
+        // Nose hole
+        let nose = SKShapeNode(ellipseOf: CGSize(width: size * 0.06, height: size * 0.08))
+        nose.fillColor = SKColor(red: 0.3, green: 0.25, blue: 0.2, alpha: 1.0)
+        nose.strokeColor = .clear
+        nose.position = CGPoint(x: 0, y: -size * 0.05)
+        skull.addChild(nose)
+
+        // Bow
+        let bowPath = CGMutablePath()
+        bowPath.move(to: CGPoint(x: size * 0.35, y: size * 0.25))
+        bowPath.addQuadCurve(to: CGPoint(x: size * 0.35, y: -size * 0.25),
+                              control: CGPoint(x: size * 0.55, y: 0))
+        let bow = SKShapeNode(path: bowPath)
+        bow.fillColor = .clear
+        bow.strokeColor = SKColor(red: 0.4, green: 0.25, blue: 0.1, alpha: 1.0)
+        bow.lineWidth = 3
+        spriteNode.addChild(bow)
+
+        // Bowstring
+        let stringPath = CGMutablePath()
+        stringPath.move(to: CGPoint(x: size * 0.35, y: size * 0.25))
+        stringPath.addLine(to: CGPoint(x: size * 0.35, y: -size * 0.25))
+        let bowString = SKShapeNode(path: stringPath)
+        bowString.strokeColor = SKColor(red: 0.7, green: 0.65, blue: 0.6, alpha: 1.0)
+        bowString.lineWidth = 1
+        spriteNode.addChild(bowString)
+    }
+
+    private func setupOrc(size: CGFloat) {
+        // Large orc body
+        let bodyPath = CGMutablePath()
+        bodyPath.move(to: CGPoint(x: -size * 0.4, y: -size * 0.4))
+        bodyPath.addLine(to: CGPoint(x: -size * 0.45, y: size * 0.1))
+        bodyPath.addLine(to: CGPoint(x: -size * 0.3, y: size * 0.25))
+        bodyPath.addLine(to: CGPoint(x: size * 0.3, y: size * 0.25))
+        bodyPath.addLine(to: CGPoint(x: size * 0.45, y: size * 0.1))
+        bodyPath.addLine(to: CGPoint(x: size * 0.4, y: -size * 0.4))
+        bodyPath.closeSubpath()
+
+        spriteNode = SKShapeNode(path: bodyPath)
+        spriteNode.fillColor = SKColor(red: 0.35, green: 0.45, blue: 0.3, alpha: 1.0) // Olive green
+        spriteNode.strokeColor = SKColor(red: 0.25, green: 0.3, blue: 0.2, alpha: 1.0)
+        spriteNode.lineWidth = 3
+        addChild(spriteNode)
+
+        // Armor chest plate
+        let armor = SKShapeNode(rectOf: CGSize(width: size * 0.5, height: size * 0.35), cornerRadius: 3)
+        armor.fillColor = SKColor(red: 0.35, green: 0.3, blue: 0.25, alpha: 1.0)
+        armor.strokeColor = SKColor(red: 0.5, green: 0.45, blue: 0.4, alpha: 1.0)
+        armor.lineWidth = 2
+        armor.position = CGPoint(x: 0, y: -size * 0.05)
+        spriteNode.addChild(armor)
+
+        // Head
+        let head = SKShapeNode(circleOfRadius: size * 0.28)
+        head.fillColor = SKColor(red: 0.4, green: 0.5, blue: 0.35, alpha: 1.0)
+        head.strokeColor = SKColor(red: 0.25, green: 0.3, blue: 0.2, alpha: 1.0)
+        head.lineWidth = 2
+        head.position = CGPoint(x: 0, y: size * 0.2)
+        spriteNode.addChild(head)
+
+        // Angry eyes
+        let leftEye = SKShapeNode(ellipseOf: CGSize(width: size * 0.12, height: size * 0.08))
+        leftEye.fillColor = SKColor.yellow
+        leftEye.strokeColor = SKColor.red
+        leftEye.lineWidth = 1
+        leftEye.position = CGPoint(x: -size * 0.12, y: size * 0.05)
+        head.addChild(leftEye)
+
+        let rightEye = SKShapeNode(ellipseOf: CGSize(width: size * 0.12, height: size * 0.08))
+        rightEye.fillColor = SKColor.yellow
+        rightEye.strokeColor = SKColor.red
+        rightEye.lineWidth = 1
+        rightEye.position = CGPoint(x: size * 0.12, y: size * 0.05)
+        head.addChild(rightEye)
+
+        // Pupils
+        let leftPupil = SKShapeNode(circleOfRadius: size * 0.03)
+        leftPupil.fillColor = SKColor.black
+        leftPupil.strokeColor = .clear
+        leftEye.addChild(leftPupil)
+
+        let rightPupil = SKShapeNode(circleOfRadius: size * 0.03)
+        rightPupil.fillColor = SKColor.black
+        rightPupil.strokeColor = .clear
+        rightEye.addChild(rightPupil)
+
+        // Tusks
+        let leftTusk = SKShapeNode(ellipseOf: CGSize(width: size * 0.08, height: size * 0.18))
+        leftTusk.fillColor = SKColor(red: 0.95, green: 0.9, blue: 0.8, alpha: 1.0)
+        leftTusk.strokeColor = SKColor(red: 0.8, green: 0.75, blue: 0.65, alpha: 1.0)
+        leftTusk.lineWidth = 1
+        leftTusk.position = CGPoint(x: -size * 0.15, y: -size * 0.18)
+        leftTusk.zRotation = 0.3
+        head.addChild(leftTusk)
+
+        let rightTusk = SKShapeNode(ellipseOf: CGSize(width: size * 0.08, height: size * 0.18))
+        rightTusk.fillColor = SKColor(red: 0.95, green: 0.9, blue: 0.8, alpha: 1.0)
+        rightTusk.strokeColor = SKColor(red: 0.8, green: 0.75, blue: 0.65, alpha: 1.0)
+        rightTusk.lineWidth = 1
+        rightTusk.position = CGPoint(x: size * 0.15, y: -size * 0.18)
+        rightTusk.zRotation = -0.3
+        head.addChild(rightTusk)
+
+        // War paint/scar
+        let scar = SKShapeNode(rectOf: CGSize(width: size * 0.25, height: size * 0.03))
+        scar.fillColor = SKColor(red: 0.6, green: 0.15, blue: 0.1, alpha: 0.8)
+        scar.strokeColor = .clear
+        scar.position = CGPoint(x: 0, y: size * 0.12)
+        scar.zRotation = -0.2
+        head.addChild(scar)
     }
 
     private func setupPhysics(size: CGFloat) {

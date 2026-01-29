@@ -126,111 +126,202 @@ class Player: SKNode {
     // MARK: - Setup
 
     private func setupVisuals() {
-        // Create knight/slayer character
+        // Create heroic champion knight
         let size = PlayerConfig.size
 
-        // Body - armored torso
-        let bodyPath = CGMutablePath()
-        bodyPath.move(to: CGPoint(x: -size * 0.3, y: -size * 0.4))
-        bodyPath.addLine(to: CGPoint(x: -size * 0.35, y: size * 0.1))
-        bodyPath.addLine(to: CGPoint(x: -size * 0.2, y: size * 0.3))
-        bodyPath.addLine(to: CGPoint(x: 0, y: size * 0.4))
-        bodyPath.addLine(to: CGPoint(x: size * 0.2, y: size * 0.3))
-        bodyPath.addLine(to: CGPoint(x: size * 0.35, y: size * 0.1))
-        bodyPath.addLine(to: CGPoint(x: size * 0.3, y: -size * 0.4))
-        bodyPath.closeSubpath()
-
-        spriteNode = SKShapeNode(path: bodyPath)
-        spriteNode.fillColor = SKColor(red: 0.2, green: 0.4, blue: 0.7, alpha: 1.0) // Blue armor
-        spriteNode.strokeColor = SKColor(red: 0.6, green: 0.7, blue: 0.9, alpha: 1.0)
-        spriteNode.lineWidth = 2
-        spriteNode.glowWidth = 4
+        // Main body container
+        spriteNode = SKShapeNode()
         addChild(spriteNode)
 
-        // Helmet/Head
-        let helmet = SKShapeNode(circleOfRadius: size * 0.22)
-        helmet.fillColor = SKColor(red: 0.7, green: 0.7, blue: 0.8, alpha: 1.0) // Silver helmet
-        helmet.strokeColor = SKColor(red: 0.5, green: 0.5, blue: 0.6, alpha: 1.0)
+        // Cape (behind everything)
+        let capePath = CGMutablePath()
+        capePath.move(to: CGPoint(x: -size * 0.25, y: size * 0.1))
+        capePath.addQuadCurve(to: CGPoint(x: -size * 0.35, y: -size * 0.5),
+                               control: CGPoint(x: -size * 0.45, y: -size * 0.2))
+        capePath.addLine(to: CGPoint(x: size * 0.35, y: -size * 0.5))
+        capePath.addQuadCurve(to: CGPoint(x: size * 0.25, y: size * 0.1),
+                               control: CGPoint(x: size * 0.45, y: -size * 0.2))
+        capePath.closeSubpath()
+        let cape = SKShapeNode(path: capePath)
+        cape.fillColor = SKColor(red: 0.7, green: 0.15, blue: 0.15, alpha: 1.0) // Royal red
+        cape.strokeColor = SKColor(red: 0.5, green: 0.1, blue: 0.1, alpha: 1.0)
+        cape.lineWidth = 1
+        cape.zPosition = -1
+        spriteNode.addChild(cape)
+
+        // Armored body
+        let bodyPath = CGMutablePath()
+        bodyPath.move(to: CGPoint(x: -size * 0.28, y: -size * 0.35))
+        bodyPath.addLine(to: CGPoint(x: -size * 0.32, y: size * 0.05))
+        bodyPath.addLine(to: CGPoint(x: -size * 0.2, y: size * 0.2))
+        bodyPath.addLine(to: CGPoint(x: size * 0.2, y: size * 0.2))
+        bodyPath.addLine(to: CGPoint(x: size * 0.32, y: size * 0.05))
+        bodyPath.addLine(to: CGPoint(x: size * 0.28, y: -size * 0.35))
+        bodyPath.closeSubpath()
+
+        let body = SKShapeNode(path: bodyPath)
+        body.fillColor = SKColor(red: 0.75, green: 0.75, blue: 0.8, alpha: 1.0) // Silver armor
+        body.strokeColor = SKColor(red: 0.5, green: 0.5, blue: 0.55, alpha: 1.0)
+        body.lineWidth = 2
+        spriteNode.addChild(body)
+
+        // Chest plate detail
+        let chestPlate = SKShapeNode(rectOf: CGSize(width: size * 0.35, height: size * 0.25), cornerRadius: 3)
+        chestPlate.fillColor = SKColor(red: 0.25, green: 0.45, blue: 0.7, alpha: 1.0) // Blue accent
+        chestPlate.strokeColor = SKColor(red: 0.8, green: 0.75, blue: 0.5, alpha: 1.0) // Gold trim
+        chestPlate.lineWidth = 2
+        chestPlate.position = CGPoint(x: 0, y: -size * 0.05)
+        body.addChild(chestPlate)
+
+        // Golden lion emblem on chest
+        let emblem = SKShapeNode(circleOfRadius: size * 0.08)
+        emblem.fillColor = SKColor(red: 0.9, green: 0.8, blue: 0.3, alpha: 1.0)
+        emblem.strokeColor = SKColor(red: 0.7, green: 0.6, blue: 0.2, alpha: 1.0)
+        emblem.lineWidth = 1
+        emblem.glowWidth = 2
+        chestPlate.addChild(emblem)
+
+        // Helmet with face guard
+        let helmetPath = CGMutablePath()
+        helmetPath.move(to: CGPoint(x: -size * 0.22, y: -size * 0.05))
+        helmetPath.addLine(to: CGPoint(x: -size * 0.25, y: size * 0.15))
+        helmetPath.addQuadCurve(to: CGPoint(x: 0, y: size * 0.32),
+                                 control: CGPoint(x: -size * 0.2, y: size * 0.35))
+        helmetPath.addQuadCurve(to: CGPoint(x: size * 0.25, y: size * 0.15),
+                                 control: CGPoint(x: size * 0.2, y: size * 0.35))
+        helmetPath.addLine(to: CGPoint(x: size * 0.22, y: -size * 0.05))
+        helmetPath.closeSubpath()
+
+        let helmet = SKShapeNode(path: helmetPath)
+        helmet.fillColor = SKColor(red: 0.8, green: 0.8, blue: 0.85, alpha: 1.0)
+        helmet.strokeColor = SKColor(red: 0.6, green: 0.6, blue: 0.65, alpha: 1.0)
         helmet.lineWidth = 2
         helmet.position = CGPoint(x: 0, y: size * 0.15)
         spriteNode.addChild(helmet)
 
-        // Helmet visor
-        let visor = SKShapeNode(rectOf: CGSize(width: size * 0.25, height: size * 0.08), cornerRadius: 2)
-        visor.fillColor = SKColor(red: 0.1, green: 0.1, blue: 0.2, alpha: 1.0)
-        visor.strokeColor = .clear
-        visor.position = CGPoint(x: 0, y: -size * 0.02)
-        helmet.addChild(visor)
+        // Visor (T-shaped opening)
+        let visorV = SKShapeNode(rectOf: CGSize(width: size * 0.06, height: size * 0.18))
+        visorV.fillColor = SKColor(red: 0.1, green: 0.15, blue: 0.25, alpha: 1.0)
+        visorV.strokeColor = .clear
+        visorV.position = CGPoint(x: 0, y: -size * 0.02)
+        helmet.addChild(visorV)
 
-        // Helmet plume/crest
+        let visorH = SKShapeNode(rectOf: CGSize(width: size * 0.28, height: size * 0.05))
+        visorH.fillColor = SKColor(red: 0.1, green: 0.15, blue: 0.25, alpha: 1.0)
+        visorH.strokeColor = .clear
+        visorH.position = CGPoint(x: 0, y: size * 0.03)
+        helmet.addChild(visorH)
+
+        // Glowing eyes through visor
+        let leftEyeGlow = SKShapeNode(circleOfRadius: size * 0.025)
+        leftEyeGlow.fillColor = SKColor(red: 0.3, green: 0.7, blue: 1.0, alpha: 1.0)
+        leftEyeGlow.strokeColor = .clear
+        leftEyeGlow.glowWidth = 4
+        leftEyeGlow.position = CGPoint(x: -size * 0.06, y: size * 0.03)
+        helmet.addChild(leftEyeGlow)
+
+        let rightEyeGlow = SKShapeNode(circleOfRadius: size * 0.025)
+        rightEyeGlow.fillColor = SKColor(red: 0.3, green: 0.7, blue: 1.0, alpha: 1.0)
+        rightEyeGlow.strokeColor = .clear
+        rightEyeGlow.glowWidth = 4
+        rightEyeGlow.position = CGPoint(x: size * 0.06, y: size * 0.03)
+        helmet.addChild(rightEyeGlow)
+
+        // Majestic plume
         let plumePath = CGMutablePath()
         plumePath.move(to: CGPoint(x: 0, y: size * 0.15))
-        plumePath.addLine(to: CGPoint(x: -size * 0.08, y: size * 0.35))
-        plumePath.addLine(to: CGPoint(x: 0, y: size * 0.3))
-        plumePath.addLine(to: CGPoint(x: size * 0.08, y: size * 0.35))
+        plumePath.addQuadCurve(to: CGPoint(x: -size * 0.12, y: size * 0.5),
+                                control: CGPoint(x: -size * 0.2, y: size * 0.35))
+        plumePath.addQuadCurve(to: CGPoint(x: 0, y: size * 0.45),
+                                control: CGPoint(x: -size * 0.05, y: size * 0.55))
+        plumePath.addQuadCurve(to: CGPoint(x: size * 0.12, y: size * 0.5),
+                                control: CGPoint(x: size * 0.05, y: size * 0.55))
+        plumePath.addQuadCurve(to: CGPoint(x: 0, y: size * 0.15),
+                                control: CGPoint(x: size * 0.2, y: size * 0.35))
         plumePath.closeSubpath()
+
         let plume = SKShapeNode(path: plumePath)
-        plume.fillColor = SKColor(red: 0.9, green: 0.2, blue: 0.2, alpha: 1.0) // Red plume
-        plume.strokeColor = .clear
+        plume.fillColor = SKColor(red: 0.85, green: 0.2, blue: 0.2, alpha: 1.0)
+        plume.strokeColor = SKColor(red: 0.6, green: 0.1, blue: 0.1, alpha: 1.0)
+        plume.lineWidth = 1
         helmet.addChild(plume)
 
-        // Sword (pointing up as direction indicator)
-        let swordPath = CGMutablePath()
-        // Blade
-        swordPath.move(to: CGPoint(x: 0, y: size * 0.5))
-        swordPath.addLine(to: CGPoint(x: -size * 0.06, y: size * 0.2))
-        swordPath.addLine(to: CGPoint(x: size * 0.06, y: size * 0.2))
-        swordPath.closeSubpath()
-        let sword = SKShapeNode(path: swordPath)
-        sword.fillColor = SKColor(red: 0.9, green: 0.9, blue: 1.0, alpha: 1.0) // Silver blade
-        sword.strokeColor = SKColor(red: 0.7, green: 0.7, blue: 0.8, alpha: 1.0)
-        sword.lineWidth = 1
-        sword.glowWidth = 2
-        sword.position = CGPoint(x: size * 0.35, y: 0)
-        spriteNode.addChild(sword)
+        // Glowing sword (right side, pointing up)
+        let bladePath = CGMutablePath()
+        bladePath.move(to: CGPoint(x: 0, y: size * 0.6))
+        bladePath.addLine(to: CGPoint(x: -size * 0.05, y: size * 0.15))
+        bladePath.addLine(to: CGPoint(x: size * 0.05, y: size * 0.15))
+        bladePath.closeSubpath()
 
-        // Sword handle
-        let handle = SKShapeNode(rectOf: CGSize(width: size * 0.04, height: size * 0.15))
-        handle.fillColor = SKColor(red: 0.4, green: 0.25, blue: 0.1, alpha: 1.0) // Brown handle
-        handle.strokeColor = .clear
-        handle.position = CGPoint(x: 0, y: size * 0.12)
-        sword.addChild(handle)
+        let blade = SKShapeNode(path: bladePath)
+        blade.fillColor = SKColor(red: 0.95, green: 0.95, blue: 1.0, alpha: 1.0)
+        blade.strokeColor = SKColor(red: 0.7, green: 0.85, blue: 1.0, alpha: 1.0)
+        blade.lineWidth = 1
+        blade.glowWidth = 6
+        blade.position = CGPoint(x: size * 0.38, y: 0)
+        spriteNode.addChild(blade)
 
         // Sword crossguard
-        let crossguard = SKShapeNode(rectOf: CGSize(width: size * 0.15, height: size * 0.04))
-        crossguard.fillColor = SKColor(red: 0.8, green: 0.7, blue: 0.2, alpha: 1.0) // Gold crossguard
-        crossguard.strokeColor = .clear
-        crossguard.position = CGPoint(x: 0, y: size * 0.2)
-        sword.addChild(crossguard)
+        let crossguard = SKShapeNode(rectOf: CGSize(width: size * 0.2, height: size * 0.05), cornerRadius: 2)
+        crossguard.fillColor = SKColor(red: 0.85, green: 0.75, blue: 0.3, alpha: 1.0)
+        crossguard.strokeColor = SKColor(red: 0.65, green: 0.55, blue: 0.2, alpha: 1.0)
+        crossguard.lineWidth = 1
+        crossguard.position = CGPoint(x: 0, y: size * 0.15)
+        blade.addChild(crossguard)
 
-        // Shield on left side
+        // Sword handle
+        let handle = SKShapeNode(rectOf: CGSize(width: size * 0.05, height: size * 0.12))
+        handle.fillColor = SKColor(red: 0.35, green: 0.2, blue: 0.1, alpha: 1.0)
+        handle.strokeColor = .clear
+        handle.position = CGPoint(x: 0, y: size * 0.08)
+        blade.addChild(handle)
+
+        // Sword pommel
+        let pommel = SKShapeNode(circleOfRadius: size * 0.04)
+        pommel.fillColor = SKColor(red: 0.85, green: 0.75, blue: 0.3, alpha: 1.0)
+        pommel.strokeColor = .clear
+        pommel.position = CGPoint(x: 0, y: size * 0.01)
+        blade.addChild(pommel)
+
+        // Shield (left side)
         let shieldPath = CGMutablePath()
-        shieldPath.move(to: CGPoint(x: 0, y: size * 0.2))
-        shieldPath.addLine(to: CGPoint(x: -size * 0.15, y: size * 0.1))
-        shieldPath.addLine(to: CGPoint(x: -size * 0.15, y: -size * 0.15))
-        shieldPath.addLine(to: CGPoint(x: 0, y: -size * 0.25))
-        shieldPath.addLine(to: CGPoint(x: size * 0.05, y: -size * 0.1))
-        shieldPath.addLine(to: CGPoint(x: size * 0.05, y: size * 0.1))
+        shieldPath.move(to: CGPoint(x: 0, y: size * 0.25))
+        shieldPath.addLine(to: CGPoint(x: -size * 0.18, y: size * 0.15))
+        shieldPath.addLine(to: CGPoint(x: -size * 0.2, y: -size * 0.1))
+        shieldPath.addLine(to: CGPoint(x: 0, y: -size * 0.28))
+        shieldPath.addLine(to: CGPoint(x: size * 0.08, y: -size * 0.05))
+        shieldPath.addLine(to: CGPoint(x: size * 0.06, y: size * 0.15))
         shieldPath.closeSubpath()
-        let playerShield = SKShapeNode(path: shieldPath)
-        playerShield.fillColor = SKColor(red: 0.6, green: 0.5, blue: 0.2, alpha: 1.0) // Gold/bronze shield
-        playerShield.strokeColor = SKColor(red: 0.8, green: 0.7, blue: 0.3, alpha: 1.0)
-        playerShield.lineWidth = 2
-        playerShield.position = CGPoint(x: -size * 0.3, y: 0)
-        spriteNode.addChild(playerShield)
 
-        // Shield emblem (cross)
-        let emblemV = SKShapeNode(rectOf: CGSize(width: size * 0.03, height: size * 0.15))
-        emblemV.fillColor = SKColor(red: 0.9, green: 0.1, blue: 0.1, alpha: 1.0)
-        emblemV.strokeColor = .clear
-        emblemV.position = CGPoint(x: -size * 0.05, y: 0)
-        playerShield.addChild(emblemV)
+        let shield = SKShapeNode(path: shieldPath)
+        shield.fillColor = SKColor(red: 0.25, green: 0.45, blue: 0.7, alpha: 1.0) // Blue shield
+        shield.strokeColor = SKColor(red: 0.85, green: 0.75, blue: 0.35, alpha: 1.0) // Gold border
+        shield.lineWidth = 3
+        shield.position = CGPoint(x: -size * 0.32, y: 0)
+        spriteNode.addChild(shield)
 
-        let emblemH = SKShapeNode(rectOf: CGSize(width: size * 0.1, height: size * 0.03))
-        emblemH.fillColor = SKColor(red: 0.9, green: 0.1, blue: 0.1, alpha: 1.0)
-        emblemH.strokeColor = .clear
-        emblemH.position = CGPoint(x: -size * 0.05, y: 0)
-        playerShield.addChild(emblemH)
+        // Shield emblem - golden lion
+        let lionHead = SKShapeNode(circleOfRadius: size * 0.08)
+        lionHead.fillColor = SKColor(red: 0.9, green: 0.8, blue: 0.35, alpha: 1.0)
+        lionHead.strokeColor = SKColor(red: 0.7, green: 0.6, blue: 0.25, alpha: 1.0)
+        lionHead.lineWidth = 1
+        lionHead.position = CGPoint(x: -size * 0.05, y: 0)
+        shield.addChild(lionHead)
+
+        // Shoulder pauldrons
+        let leftPauldron = SKShapeNode(ellipseOf: CGSize(width: size * 0.2, height: size * 0.15))
+        leftPauldron.fillColor = SKColor(red: 0.7, green: 0.7, blue: 0.75, alpha: 1.0)
+        leftPauldron.strokeColor = SKColor(red: 0.85, green: 0.75, blue: 0.35, alpha: 1.0)
+        leftPauldron.lineWidth = 2
+        leftPauldron.position = CGPoint(x: -size * 0.28, y: size * 0.12)
+        spriteNode.addChild(leftPauldron)
+
+        let rightPauldron = SKShapeNode(ellipseOf: CGSize(width: size * 0.2, height: size * 0.15))
+        rightPauldron.fillColor = SKColor(red: 0.7, green: 0.7, blue: 0.75, alpha: 1.0)
+        rightPauldron.strokeColor = SKColor(red: 0.85, green: 0.75, blue: 0.35, alpha: 1.0)
+        rightPauldron.lineWidth = 2
+        rightPauldron.position = CGPoint(x: size * 0.28, y: size * 0.12)
+        spriteNode.addChild(rightPauldron)
 
         zPosition = GameConfig.ZPosition.player
     }
@@ -316,10 +407,9 @@ class Player: SKNode {
 
         guard lastAttackTime >= attackInterval else { return }
 
-        // Find nearest enemy in range
+        // Find nearest enemy (regardless of range - always shoot toward threats)
         let nearestEnemy = findNearestEnemy(enemies: enemies)
-        guard let target = nearestEnemy,
-              distanceTo(target) <= stats.attackRange else { return }
+        guard let target = nearestEnemy else { return }
 
         currentTarget = target
         lastAttackTime = 0

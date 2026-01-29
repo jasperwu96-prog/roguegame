@@ -979,6 +979,28 @@ class GameScene: SKScene {
     private func continueAfterUpgrade() {
         gameState = .playing
 
+        // Force cleanup of any dead enemies still in array
+        enemies.removeAll { $0.isDead }
+
+        // Remove any lingering enemy nodes that might have been orphaned
+        for child in gameLayer.children {
+            if let enemy = child as? Enemy, enemy.isDead {
+                enemy.removeFromParent()
+            }
+        }
+
+        // Clean up inactive projectiles
+        projectiles.removeAll { !$0.isActive }
+        for projectile in projectiles where !projectile.isActive {
+            projectile.removeFromParent()
+        }
+
+        // Clean up danger zones
+        for zone in dangerZones {
+            zone.removeFromParent()
+        }
+        dangerZones.removeAll()
+
         // Start next wave
         waveManager.startNextWave()
     }

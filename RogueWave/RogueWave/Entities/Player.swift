@@ -869,6 +869,8 @@ class Player: SKNode {
         abilities.timeSlowDuration = 3.0
 
         if let timeField = childNode(withName: "timeField") {
+            // CRITICAL: Remove repeatForever pulse action before removing node
+            timeField.removeAllActions()
             timeField.run(SKAction.sequence([
                 SKAction.fadeOut(withDuration: 0.3),
                 SKAction.removeFromParent()
@@ -976,6 +978,8 @@ class Player: SKNode {
         abilities.reflectDuration = 2.0
 
         if let reflectShield = childNode(withName: "reflectShield") {
+            // CRITICAL: Remove repeatForever spin action before removing node
+            reflectShield.removeAllActions()
             reflectShield.run(SKAction.sequence([
                 SKAction.fadeOut(withDuration: 0.2),
                 SKAction.removeFromParent()
@@ -1021,38 +1025,40 @@ class Player: SKNode {
     // MARK: - Upgrades
 
     func applyUpgrade(_ upgrade: Upgrade) {
+        // Note: Each upgrade is applied once per selection, so we only add the base bonus
+        // (not multiplied by level - the level just tracks how many times we've picked this upgrade)
         switch upgrade.type {
         case .maxHealth:
-            let bonus = UpgradeConfig.PassiveValues.healthBonus * CGFloat(upgrade.level)
+            let bonus = UpgradeConfig.PassiveValues.healthBonus
             stats.maxHealth += bonus
             stats.currentHealth += bonus
 
         case .moveSpeed:
-            stats.speed += UpgradeConfig.PassiveValues.speedBonus * CGFloat(upgrade.level)
+            stats.speed += UpgradeConfig.PassiveValues.speedBonus
 
         case .damage:
-            stats.damage += UpgradeConfig.PassiveValues.damageBonus * CGFloat(upgrade.level)
+            stats.damage += UpgradeConfig.PassiveValues.damageBonus
 
         case .attackSpeed:
-            stats.attackSpeed += UpgradeConfig.PassiveValues.attackSpeedBonus * CGFloat(upgrade.level)
+            stats.attackSpeed += UpgradeConfig.PassiveValues.attackSpeedBonus
 
         case .critChance:
-            stats.critChance += UpgradeConfig.PassiveValues.critChanceBonus * CGFloat(upgrade.level)
+            stats.critChance += UpgradeConfig.PassiveValues.critChanceBonus
 
         case .critDamage:
-            stats.critMultiplier += UpgradeConfig.PassiveValues.critDamageBonus * CGFloat(upgrade.level)
+            stats.critMultiplier += UpgradeConfig.PassiveValues.critDamageBonus
 
         case .attackRange:
-            stats.attackRange += UpgradeConfig.PassiveValues.rangeBonus * CGFloat(upgrade.level)
+            stats.attackRange += UpgradeConfig.PassiveValues.rangeBonus
 
         case .projectileSpeed:
-            stats.projectileSpeed += UpgradeConfig.PassiveValues.projectileSpeedBonus * CGFloat(upgrade.level)
+            stats.projectileSpeed += UpgradeConfig.PassiveValues.projectileSpeedBonus
 
         case .armor:
-            stats.armor += 5 * CGFloat(upgrade.level)
+            stats.armor += 5
 
         case .lifeSteal:
-            stats.lifeSteal += 0.03 * CGFloat(upgrade.level)
+            stats.lifeSteal += 0.03
 
         case .dash:
             abilities.hasDash = true

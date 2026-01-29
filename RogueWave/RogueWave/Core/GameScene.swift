@@ -49,6 +49,10 @@ class GameScene: SKScene {
     private var killCount: Int = 0
     private var rerollsRemaining: Int = 0
 
+    // Wave 10+ skill checks - danger zones
+    private var lastDangerZoneTime: TimeInterval = 0
+    private var dangerZones: [SKNode] = []
+
     // Chunk coordinate helper
     private struct ChunkCoord: Hashable {
         let x: Int
@@ -579,6 +583,13 @@ class GameScene: SKScene {
             projectile.removeFromParent()
         }
         projectiles.removeAll()
+
+        // Remove all danger zones
+        for zone in dangerZones {
+            zone.removeFromParent()
+        }
+        dangerZones.removeAll()
+        lastDangerZoneTime = 0
     }
 
     // MARK: - Update Loop
@@ -600,6 +611,7 @@ class GameScene: SKScene {
         updateEnemies(deltaTime: deltaTime)
         updateProjectiles(deltaTime: deltaTime)
         updateWaveManager(deltaTime: deltaTime)
+        updateDangerZones(deltaTime: deltaTime)
 
         // Update statistics
         GameManager.shared.updateSurvivedTime(gameTime)
@@ -704,26 +716,143 @@ class GameScene: SKScene {
         waveManager.update(deltaTime: deltaTime, currentEnemyCount: enemies.count)
     }
 
+    // MARK: - Wave 10+ Danger Zones
+
+    private func updateDangerZones(deltaTime: TimeInterval) {
+        guard waveManager.currentWave >= WaveConfig.dangerZoneWave else { return }
+
+        lastDangerZoneTime += deltaTime
+
+        // Spawn new danger zone periodically
+        if lastDangerZoneTime >= WaveConfig.dangerZoneInterval {
+            lastDangerZoneTime = 0
+            spawnDangerZone()
+        }
+
+        // Clean up expired zones
+        dangerZones.removeAll { $0.parent == nil }
+    }
+
+    private func spawnDangerZone() {
+        // Spawn danger zone near player (but not directly on them)
+        let angle = CGFloat.random(in: 0...(.pi * 2))
+        let distance = CGFloat.random(in: 50...150)
+        let spawnPos = CGPoint(
+            x: player.position.x + cos(angle) * distance,
+            y: player.position.y + sin(angle) * distance
+        )
+
+        let dangerZone = createDangerZone(at: spawnPos)
+        gameLayer.addChild(dangerZone)
+        dangerZones.append(dangerZone)
+    }
+
+    private func createDangerZone(at position: CGPoint) -> SKNode {
+        let zone = SKNode()
+        zone.position = position
+        zone.zPosition = GameConfig.ZPosition.floor + 1
+
+        let radius = WaveConfig.dangerZoneRadius
+
+        // Warning indicator (red circle that grows)
+        let warningCircle = SKShapeNode(circleOfRadius: radius)
+        warningCircle.fillColor = SKColor.red.withAlphaComponent(0.2)
+        warningCircle.strokeColor = SKColor.red
+        warningCircle.lineWidth = 3
+        warningCircle.glowWidth = 5
+        warningCircle.setScale(0.3)
+        zone.addChild(warningCircle)
+
+        // Inner danger indicator
+        let innerCircle = SKShapeNode(circleOfRadius: radius * 0.5)
+        innerCircle.fillColor = .clear
+        innerCircle.strokeColor = SKColor.red.withAlphaComponent(0.8)
+        innerCircle.lineWidth = 2
+        warningCircle.addChild(innerCircle)
+
+        // Pulse animation during warning phase
+        let pulseAction = SKAction.sequence([
+            SKAction.group([
+                SKAction.scale(to: 1.0, duration: 0.5),
+                SKAction.run { warningCircle.fillColor = SKColor.red.withAlphaComponent(0.3) }
+            ]),
+            SKAction.group([
+                SKAction.scale(to: 0.9, duration: 0.3),
+                SKAction.run { warningCircle.fillColor = SKColor.red.withAlphaComponent(0.2) }
+            ])
+        ])
+
+        // Warning phase then explosion
+        let warningDuration = WaveConfig.dangerZoneDuration - 0.5
+
+        let sequence = SKAction.sequence([
+            SKAction.repeat(pulseAction, count: Int(warningDuration / 0.8)),
+            SKAction.run { [weak self, weak zone] in
+                guard let self = self, let zone = zone else { return }
+                self.explodeDangerZone(zone, radius: radius)
+            },
+            SKAction.wait(forDuration: 0.3),
+            SKAction.removeFromParent()
+        ])
+
+        zone.run(sequence)
+
+        return zone
+    }
+
+    private func explodeDangerZone(_ zone: SKNode, radius: CGFloat) {
+        // Visual explosion
+        let explosion = SKShapeNode(circleOfRadius: radius)
+        explosion.fillColor = SKColor.red.withAlphaComponent(0.8)
+        explosion.strokeColor = SKColor.orange
+        explosion.lineWidth = 4
+        explosion.glowWidth = 10
+        explosion.setScale(0.5)
+        zone.addChild(explosion)
+
+        // Explosion animation
+        let expandAction = SKAction.sequence([
+            SKAction.group([
+                SKAction.scale(to: 1.2, duration: 0.15),
+                SKAction.fadeAlpha(to: 0.6, duration: 0.15)
+            ]),
+            SKAction.group([
+                SKAction.scale(to: 0.8, duration: 0.1),
+                SKAction.fadeOut(withDuration: 0.2)
+            ])
+        ])
+        explosion.run(expandAction)
+
+        // Check if player is in range and deal damage
+        let dx = player.position.x - zone.position.x
+        let dy = player.position.y - zone.position.y
+        let distance = sqrt(dx * dx + dy * dy)
+
+        if distance <= radius {
+            player.takeDamage(WaveConfig.dangerZoneDamage)
+        }
+    }
+
     // MARK: - Touch Handling
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard let touch = touches.first else { return }
-        let location = touch.location(in: self)
+        // Handle ALL touches for multi-touch support (joystick + abilities)
+        for touch in touches {
+            let location = touch.location(in: self)
 
-        // Check UI first
-        if uiManager.handleTouch(at: location) {
-            return
-        }
+            // Check UI/ability buttons first (works even while moving)
+            if uiManager.handleTouch(at: location) {
+                continue
+            }
 
-        // Right side of screen for abilities (if not using joystick)
-        if location.x > size.width / 2 {
-            // Tap to use abilities (in order of priority)
-            if player.abilities.hasDash && player.abilities.dashCooldownRemaining <= 0 {
-                player.activateDash(direction: joystick.currentDirection)
-            } else if player.abilities.hasAOE && player.abilities.aoeCooldownRemaining <= 0 {
-                activateAOE()
-            } else if player.abilities.hasShield && player.abilities.shieldCooldownRemaining <= 0 {
-                player.activateShield()
+            // Right side screen tap for quick abilities (if not hitting a specific button)
+            let cameraLocation = CGPoint(
+                x: location.x - (camera?.position.x ?? 0),
+                y: location.y - (camera?.position.y ?? 0)
+            )
+            if cameraLocation.x > 0 {  // Right half of camera view
+                // Don't auto-trigger abilities - let the buttons handle it
+                // This prevents accidental ability use
             }
         }
     }
@@ -831,11 +960,34 @@ extension GameScene: SKPhysicsContactDelegate {
             GameManager.shared.recordCriticalHit()
         }
 
-        // Apply life steal
+        // Apply life steal and update UI
+        let healthBefore = player.stats.currentHealth
         player.applyLifeSteal(from: projectile.damage)
+        if player.stats.currentHealth > healthBefore {
+            uiManager.updateHealth(current: player.stats.currentHealth, max: player.stats.maxHealth)
+            // Show heal visual
+            showHealEffect(amount: player.stats.currentHealth - healthBefore)
+        }
 
         // Handle projectile
         projectile.onHit()
+    }
+
+    private func showHealEffect(amount: CGFloat) {
+        let healLabel = SKLabelNode(fontNamed: UIConfig.fontName)
+        healLabel.text = "+\(Int(amount))"
+        healLabel.fontSize = 14
+        healLabel.fontColor = SKColor.green
+        healLabel.position = CGPoint(x: player.position.x, y: player.position.y + 40)
+        healLabel.zPosition = GameConfig.ZPosition.effects
+        gameLayer.addChild(healLabel)
+
+        let floatUp = SKAction.moveBy(x: 0, y: 30, duration: 0.6)
+        let fadeOut = SKAction.fadeOut(withDuration: 0.6)
+        healLabel.run(SKAction.sequence([
+            SKAction.group([floatUp, fadeOut]),
+            SKAction.removeFromParent()
+        ]))
     }
 
     private func handleEnemyProjectilePlayerCollision(_ contact: SKPhysicsContact) {

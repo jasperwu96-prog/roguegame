@@ -53,6 +53,14 @@ class Enemy: SKNode {
     // For regenerating modifier
     var regenRate: CGFloat = 0
 
+    // Wave 10+ skill checks
+    var waveNumber: Int = 1
+    var canMultiShot: Bool = false  // Fires spread pattern
+    var canCharge: Bool = false      // Charges at player
+    var isCharging: Bool = false
+    var chargeCooldown: TimeInterval = 0
+    var lastChargeTime: TimeInterval = 0
+
     // Target reference
     weak var target: Player?
 
@@ -62,6 +70,16 @@ class Enemy: SKNode {
         self.enemyType = type
         self.isElite = isElite
         self.isBoss = isBoss
+        self.waveNumber = waveNumber
+
+        // Wave 10+ skill checks - enable advanced behaviors
+        if waveNumber >= WaveConfig.multiShotWave && type != .swarm {
+            self.canMultiShot = true
+        }
+        if waveNumber >= WaveConfig.chargeWave && (type == .chaser || type == .tank) {
+            self.canCharge = true
+            self.chargeCooldown = WaveConfig.chargeCooldown
+        }
 
         // Calculate base stats based on type
         var baseHealth: CGFloat = 0
@@ -154,6 +172,13 @@ class Enemy: SKNode {
         }
 
         self.currentHealth = self.maxHealth
+
+        // Wave 10+ projectile speed scaling - projectiles get faster!
+        if waveNumber > WaveConfig.hardModeWave && self.canShoot {
+            let wavesAfterHard = CGFloat(waveNumber - WaveConfig.hardModeWave)
+            let speedMultiplier = pow(WaveConfig.projectileSpeedScalingPerWave, wavesAfterHard)
+            self.projectileSpeed *= speedMultiplier
+        }
 
         super.init()
 
@@ -586,24 +611,80 @@ class Enemy: SKNode {
             currentHealth = min(currentHealth + regenRate * CGFloat(deltaTime), maxHealth)
         }
 
+        // Update charge cooldown
+        if canCharge && !isCharging {
+            lastChargeTime += deltaTime
+        }
+
         // Movement and attack behavior - enemies that can shoot use ranged behavior
         if canShoot {
             updateRangedBehavior(deltaTime: deltaTime, target: target)
         } else {
-            updateChaserBehavior(target: target)
+            updateChaserBehavior(deltaTime: deltaTime, target: target)
         }
 
         lastAttackTime += deltaTime
     }
 
-    private func updateChaserBehavior(target: Player) {
-        // Move toward player
+    private func updateChaserBehavior(deltaTime: TimeInterval, target: Player) {
         let direction = directionTo(target)
+        let distanceToTarget = distanceTo(target)
+
+        // Check for charge attack (wave 12+)
+        if canCharge && !isCharging && lastChargeTime >= chargeCooldown && distanceToTarget < 200 {
+            startCharge(toward: target)
+            return
+        }
+
+        // If currently charging, maintain charge velocity
+        if isCharging {
+            return  // Velocity is already set by charge
+        }
+
+        // Normal movement toward player
         physicsBody?.velocity = CGVector(dx: direction.x * moveSpeed, dy: direction.y * moveSpeed)
 
         // Rotate to face player
         let angle = atan2(direction.y, direction.x) - .pi / 2
         spriteNode.zRotation = angle
+    }
+
+    private func startCharge(toward target: Player) {
+        isCharging = true
+        lastChargeTime = 0
+
+        // Telegraph the charge with a brief pause and visual
+        let direction = directionTo(target)
+        physicsBody?.velocity = .zero
+
+        // Warning flash
+        let originalColor = spriteNode.fillColor
+        let warningAction = SKAction.sequence([
+            SKAction.run { [weak self] in self?.spriteNode.fillColor = SKColor.red },
+            SKAction.wait(forDuration: 0.15),
+            SKAction.run { [weak self] in self?.spriteNode.fillColor = SKColor.orange },
+            SKAction.wait(forDuration: 0.15),
+            SKAction.run { [weak self] in self?.spriteNode.fillColor = originalColor }
+        ])
+
+        // Execute charge after telegraph
+        let chargeAction = SKAction.sequence([
+            warningAction,
+            SKAction.run { [weak self] in
+                guard let self = self else { return }
+                // Launch at high speed in the direction
+                self.physicsBody?.velocity = CGVector(
+                    dx: direction.x * WaveConfig.chargeSpeed,
+                    dy: direction.y * WaveConfig.chargeSpeed
+                )
+            },
+            SKAction.wait(forDuration: 0.5),  // Charge duration
+            SKAction.run { [weak self] in
+                self?.isCharging = false
+            }
+        ])
+
+        run(chargeAction, withKey: "chargeAttack")
     }
 
     private func updateRangedBehavior(deltaTime: TimeInterval, target: Player) {
@@ -643,20 +724,43 @@ class Enemy: SKNode {
     }
 
     private func shoot(at target: Player) {
-        let angle = angleTo(target)
+        let baseAngle = angleTo(target)
 
-        let projectile = Projectile(
-            damage: damage,
-            speed: projectileSpeed,
-            angle: angle,
-            isPlayerProjectile: false,
-            piercing: false,
-            homing: false,
-            isCritical: false
-        )
-        projectile.position = position
+        // Multi-shot spread pattern after wave 10
+        if canMultiShot {
+            let shotCount = WaveConfig.multiShotCount
+            let spreadAngle: CGFloat = .pi / 6  // 30 degree total spread
 
-        delegate?.enemyDidShoot(self, projectile: projectile)
+            for i in 0..<shotCount {
+                let angleOffset = spreadAngle * (CGFloat(i) - CGFloat(shotCount - 1) / 2) / CGFloat(max(shotCount - 1, 1))
+                let shotAngle = baseAngle + angleOffset
+
+                let projectile = Projectile(
+                    damage: damage * 0.7,  // Slightly less damage per shot
+                    speed: projectileSpeed,
+                    angle: shotAngle,
+                    isPlayerProjectile: false,
+                    piercing: false,
+                    homing: false,
+                    isCritical: false
+                )
+                projectile.position = position
+                delegate?.enemyDidShoot(self, projectile: projectile)
+            }
+        } else {
+            // Single shot
+            let projectile = Projectile(
+                damage: damage,
+                speed: projectileSpeed,
+                angle: baseAngle,
+                isPlayerProjectile: false,
+                piercing: false,
+                homing: false,
+                isCritical: false
+            )
+            projectile.position = position
+            delegate?.enemyDidShoot(self, projectile: projectile)
+        }
 
         // Visual feedback
         let recoilAction = SKAction.sequence([

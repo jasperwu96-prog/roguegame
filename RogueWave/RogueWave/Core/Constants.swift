@@ -162,9 +162,31 @@ enum WaveConfig {
     static let modifierChance: CGFloat = 0.3
 
     // First 3 waves spawn configuration - ACTION PACKED!
-    static let wave1Enemies: [(EnemyType, Int)] = [(.chaser, 12), (.swarm, 8)]  // Lots of enemies from start!
+    static let wave1Enemies: [(EnemyType, Int)] = [(.chaser, 12), (.swarm, 8)]
     static let wave2Enemies: [(EnemyType, Int)] = [(.chaser, 15), (.swarm, 12), (.ranged, 3)]
     static let wave3Enemies: [(EnemyType, Int)] = [(.chaser, 12), (.swarm, 15), (.ranged, 5), (.tank, 2)]
+
+    // WAVE 10+ SKILL CHECKS
+    static let hardModeWave: Int = 10
+
+    // After wave 10: Projectiles get faster
+    static let projectileSpeedScalingPerWave: CGFloat = 1.08  // 8% faster per wave after 10
+
+    // After wave 10: Enemies shoot more projectiles
+    static let multiShotWave: Int = 10
+    static let multiShotCount: Int = 3  // Enemies fire 3-shot spread
+
+    // After wave 12: Charging enemies
+    static let chargeWave: Int = 12
+    static let chargeSpeed: CGFloat = 500  // Fast charge attack
+    static let chargeCooldown: TimeInterval = 4.0
+
+    // After wave 15: Danger zones spawn
+    static let dangerZoneWave: Int = 15
+    static let dangerZoneInterval: TimeInterval = 8.0
+    static let dangerZoneDamage: CGFloat = 20
+    static let dangerZoneRadius: CGFloat = 80
+    static let dangerZoneDuration: TimeInterval = 3.0
 }
 
 // MARK: - Upgrade Configuration

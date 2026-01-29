@@ -308,9 +308,14 @@ class UIManager {
             return true
         }
 
-        // Check ability buttons (using camera-relative coordinates)
+        // Check ability buttons (using camera-relative coordinates with larger hit area)
         for (type, button) in abilityButtons {
-            if button.frame.contains(cameraLocation) {
+            // Use distance check for circular buttons with expanded hit area
+            let dx = cameraLocation.x - button.position.x
+            let dy = cameraLocation.y - button.position.y
+            let distance = sqrt(dx * dx + dy * dy)
+            let hitRadius: CGFloat = 35  // Larger hit area for easier tapping while moving
+            if distance <= hitRadius {
                 delegate?.abilityButtonPressed(type)
                 return true
             }

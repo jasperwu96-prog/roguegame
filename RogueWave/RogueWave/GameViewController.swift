@@ -55,7 +55,8 @@ class GameViewController: UIViewController {
     }
 
     private func presentGameScene() {
-        let scene = GameScene(size: skView.bounds.size)
+        // Start with main menu instead of game
+        let scene = MainMenuScene(size: skView.bounds.size)
         scene.scaleMode = .aspectFill
 
         skView.presentScene(scene)

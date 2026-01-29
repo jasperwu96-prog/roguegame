@@ -1441,8 +1441,11 @@ extension GameScene: UIManagerDelegate {
     }
 
     func mainMenuButtonPressed() {
-        // For now, just restart
-        restartGame()
+        // Return to main menu
+        let transition = SKTransition.fade(withDuration: 0.5)
+        let menuScene = MainMenuScene(size: size)
+        menuScene.scaleMode = .aspectFill
+        view?.presentScene(menuScene, transition: transition)
     }
 
     func abilityButtonPressed(_ ability: UpgradeType) {

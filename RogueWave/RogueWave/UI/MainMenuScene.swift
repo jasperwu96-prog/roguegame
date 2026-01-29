@@ -244,16 +244,23 @@ class MainMenuScene: SKScene {
     }
 
     private func handleButtonTouch(at location: CGPoint) {
+        // Don't handle touches if submenu is open
+        if currentSubMenu != nil { return }
+
         let menuLocation = menuContainer.convert(location, from: self)
 
         let buttons = [playButton, charactersButton, upgradesButton,
                        achievementsButton, statsButton, challengesButton, settingsButton]
 
         for button in buttons {
-            if let btn = button, btn.contains(menuLocation) {
-                btn.triggerTap()
-                AudioManager.shared.playSFX(.buttonPress, on: self)
-                break
+            if let btn = button {
+                // Convert to button's local coordinate system
+                let buttonLocalPoint = btn.convert(menuLocation, from: menuContainer)
+                if btn.contains(buttonLocalPoint) {
+                    btn.triggerTap()
+                    AudioManager.shared.playSFX(.buttonPress, on: self)
+                    break
+                }
             }
         }
     }

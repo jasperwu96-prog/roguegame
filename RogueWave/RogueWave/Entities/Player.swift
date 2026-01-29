@@ -859,16 +859,8 @@ class Player: SKNode {
 
         guard lastAttackTime >= attackInterval else { return }
 
-        // Always shoot! Find best direction
-        if let target = findNearestEnemy(enemies: enemies, includeDead: false) {
-            // Found a live enemy - shoot at it
-            currentTarget = target
-            lastAttackAngle = angleTo(target)
-        } else if let target = findNearestEnemy(enemies: enemies, includeDead: true) {
-            // Only dead enemies - shoot toward where they are
-            lastAttackAngle = angleTo(target)
-        } else if movementVector != .zero {
-            // No enemies - shoot in movement direction
+        // Shoot in the direction the player is facing (movement direction)
+        if movementVector != .zero {
             lastAttackAngle = atan2(movementVector.dy, movementVector.dx)
         }
         // Otherwise keep using lastAttackAngle (previous direction)

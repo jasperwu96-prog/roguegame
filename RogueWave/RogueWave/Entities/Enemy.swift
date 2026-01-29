@@ -872,25 +872,17 @@ class Enemy: SKNode {
         fuseActive = true
         fuseTimer = 0
 
-        // Show spark
+        // SIMPLIFIED: Show spark without repeatForever animation
+        // The updateSuicideBehavior handles visual flashing via color change
         if let spark = spriteNode.childNode(withName: "spark") {
             spark.isHidden = false
-            // Flickering animation
-            let flicker = SKAction.repeatForever(SKAction.sequence([
-                SKAction.fadeAlpha(to: 0.5, duration: 0.05),
-                SKAction.fadeAlpha(to: 1.0, duration: 0.05)
-            ]))
-            spark.run(flicker)
+            // Static glow, no animation - prevents action accumulation
         }
 
-        // Show warning
+        // SIMPLIFIED: Show warning without repeatForever animation
         if let warning = spriteNode.childNode(withName: "warning") {
             warning.isHidden = false
-            let blink = SKAction.repeatForever(SKAction.sequence([
-                SKAction.fadeAlpha(to: 0.3, duration: 0.15),
-                SKAction.fadeAlpha(to: 1.0, duration: 0.15)
-            ]))
-            warning.run(blink)
+            // Static warning, flashing handled by updateSuicideBehavior color changes
         }
 
         // Ticking sound/haptic
@@ -1264,11 +1256,28 @@ class Enemy: SKNode {
         healthBar.xScale = healthPercent
     }
 
+    // Track last hit time to throttle feedback
+    private var lastHitFeedbackTime: TimeInterval = 0
+    private static let hitFeedbackThrottle: TimeInterval = 0.15  // Only show feedback every 150ms
+
     private func showHitFeedback(isCritical: Bool) {
-        // SIMPLIFIED: Just a brief alpha flash, no color change or knockback actions
-        // This reduces action count during rapid attacks on bosses
-        alpha = 0.6
-        run(SKAction.fadeAlpha(to: 1.0, duration: 0.1))
+        // COMPLETELY DISABLED during combat to prevent action accumulation
+        // No actions are created - just a direct alpha change that resets on next frame
+        // Critical hits get a brief flash only if enough time has passed
+        let currentTime = CACurrentMediaTime()
+
+        // Throttle feedback to prevent action accumulation during rapid attacks
+        guard currentTime - lastHitFeedbackTime >= Enemy.hitFeedbackThrottle else { return }
+        lastHitFeedbackTime = currentTime
+
+        // Direct alpha change - no SKAction created
+        alpha = isCritical ? 0.4 : 0.6
+
+        // Reset alpha after a short delay using a simple timer approach
+        // This creates only ONE scheduled action at a time due to the throttle
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) { [weak self] in
+            self?.alpha = 1.0
+        }
     }
 
     private func showDamageNumber(_ amount: CGFloat, isCritical: Bool) {

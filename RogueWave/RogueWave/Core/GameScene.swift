@@ -63,6 +63,10 @@ class GameScene: SKScene {
     private var cameraOriginalPosition: CGPoint = .zero
     private var isShaking: Bool = false
 
+    // Heal effect throttling to prevent node accumulation during rapid hits
+    private var lastHealEffectTime: TimeInterval = 0
+    private let healEffectThrottle: TimeInterval = 0.3  // Only show heal effect every 300ms
+
     // Chunk coordinate helper
     private struct ChunkCoord: Hashable {
         let x: Int
@@ -1080,6 +1084,11 @@ extension GameScene: SKPhysicsContactDelegate {
     }
 
     private func showHealEffect(amount: CGFloat) {
+        // Throttle heal effects to prevent node/action accumulation during rapid attacks
+        let currentTime = CACurrentMediaTime()
+        guard currentTime - lastHealEffectTime >= healEffectThrottle else { return }
+        lastHealEffectTime = currentTime
+
         let healLabel = SKLabelNode(fontNamed: UIConfig.fontName)
         healLabel.text = "+\(Int(amount))"
         healLabel.fontSize = 14

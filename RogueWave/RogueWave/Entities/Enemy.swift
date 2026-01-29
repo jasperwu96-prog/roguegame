@@ -461,7 +461,7 @@ class Enemy: SKNode {
         // Remove actions
         removeAction(forKey: "elitePulse")
 
-        // Death animation
+        // Death animation - notify delegate, then remove from scene
         let deathAction = SKAction.sequence([
             SKAction.group([
                 SKAction.scale(to: 1.3, duration: 0.1),
@@ -470,7 +470,8 @@ class Enemy: SKNode {
             SKAction.run { [weak self] in
                 guard let self = self else { return }
                 self.delegate?.enemyDidDie(self)
-            }
+            },
+            SKAction.removeFromParent()
         ])
         run(deathAction)
 

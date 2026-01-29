@@ -215,7 +215,7 @@ class MainMenuScene: SKScene {
         // Quick stats display
         let stats = GameManager.shared
         let quickStats = SKLabelNode(fontNamed: UIConfig.fontName)
-        quickStats.text = "Best Wave: \(stats.getHighestWave()) | Total Kills: \(stats.getTotalKills())"
+        quickStats.text = "Best Wave: \(stats.metaProgression.highestWave) | Total Kills: \(stats.metaProgression.totalKills)"
         quickStats.fontSize = 12
         quickStats.fontColor = SKColor(white: 0.5, alpha: 1.0)
         quickStats.position = CGPoint(x: size.width / 2, y: 30)

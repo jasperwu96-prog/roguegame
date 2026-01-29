@@ -463,8 +463,8 @@ class GameScene: SKScene {
 
     private func updateSpawnBoundsAroundPlayer() {
         // Create spawn bounds centered on player position
-        // Reduced radius so enemies spawn closer and get in attack range faster
-        let spawnRadius: CGFloat = 350
+        // Spawn just outside screen so enemies are quickly visible and in range
+        let spawnRadius: CGFloat = 280
         waveManager.spawnBounds = CGRect(
             x: player.position.x - spawnRadius,
             y: player.position.y - spawnRadius,

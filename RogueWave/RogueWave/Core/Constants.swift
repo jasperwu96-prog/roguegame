@@ -68,19 +68,19 @@ enum PlayerConfig {
 
 enum EnemyConfig {
     // Spawn settings
-    static let spawnPadding: CGFloat = 50  // Distance from screen edge
+    static let spawnPadding: CGFloat = 30  // Distance outside spawn bounds
     static let maxEnemiesOnScreen: Int = 50
-    static let spawnInterval: TimeInterval = 0.5
+    static let spawnInterval: TimeInterval = 0.3  // Faster spawning
 
     // Base scaling per wave
     static let healthScalingPerWave: CGFloat = 1.15
     static let damageScalingPerWave: CGFloat = 1.1
     static let speedScalingPerWave: CGFloat = 1.02
 
-    // Enemy type configurations
+    // Enemy type configurations - speeds increased for open world
     enum Chaser {
         static let baseHealth: CGFloat = 20
-        static let baseSpeed: CGFloat = 100
+        static let baseSpeed: CGFloat = 180  // Faster to reach player quickly
         static let baseDamage: CGFloat = 10
         static let size: CGFloat = 30
         static let color: SKColor = SKColor(red: 0.9, green: 0.3, blue: 0.3, alpha: 1.0)
@@ -89,7 +89,7 @@ enum EnemyConfig {
 
     enum Swarm {
         static let baseHealth: CGFloat = 10
-        static let baseSpeed: CGFloat = 150
+        static let baseSpeed: CGFloat = 220  // Very fast swarm
         static let baseDamage: CGFloat = 5
         static let size: CGFloat = 20
         static let color: SKColor = SKColor(red: 0.9, green: 0.6, blue: 0.2, alpha: 1.0)
@@ -98,19 +98,19 @@ enum EnemyConfig {
 
     enum Ranged {
         static let baseHealth: CGFloat = 15
-        static let baseSpeed: CGFloat = 60
+        static let baseSpeed: CGFloat = 100  // Ranged stays back
         static let baseDamage: CGFloat = 15
         static let size: CGFloat = 28
         static let color: SKColor = SKColor(red: 0.6, green: 0.3, blue: 0.9, alpha: 1.0)
-        static let attackRange: CGFloat = 250
-        static let projectileSpeed: CGFloat = 300
-        static let attackCooldown: TimeInterval = 2.0
+        static let attackRange: CGFloat = 350
+        static let projectileSpeed: CGFloat = 350
+        static let attackCooldown: TimeInterval = 1.5
         static let xpValue: Int = 15
     }
 
     enum Tank {
         static let baseHealth: CGFloat = 80
-        static let baseSpeed: CGFloat = 50
+        static let baseSpeed: CGFloat = 90  // Slow but not too slow
         static let baseDamage: CGFloat = 25
         static let size: CGFloat = 50
         static let color: SKColor = SKColor(red: 0.4, green: 0.4, blue: 0.5, alpha: 1.0)

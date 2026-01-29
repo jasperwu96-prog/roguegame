@@ -961,34 +961,59 @@ class UpgradeCard: SKNode {
             }
 
         case .maxHealth:
-            // Heart icon
-            let heart = SKShapeNode(circleOfRadius: iconSize * 0.5)
+            // Heart icon - actual heart shape
+            let heartPath = CGMutablePath()
+            heartPath.move(to: CGPoint(x: 0, y: -iconSize * 0.5))
+            heartPath.addCurve(
+                to: CGPoint(x: -iconSize * 0.5, y: iconSize * 0.2),
+                control1: CGPoint(x: -iconSize * 0.1, y: -iconSize * 0.5),
+                control2: CGPoint(x: -iconSize * 0.5, y: -iconSize * 0.2)
+            )
+            heartPath.addCurve(
+                to: CGPoint(x: 0, y: iconSize * 0.5),
+                control1: CGPoint(x: -iconSize * 0.5, y: iconSize * 0.5),
+                control2: CGPoint(x: -iconSize * 0.15, y: iconSize * 0.5)
+            )
+            heartPath.addCurve(
+                to: CGPoint(x: iconSize * 0.5, y: iconSize * 0.2),
+                control1: CGPoint(x: iconSize * 0.15, y: iconSize * 0.5),
+                control2: CGPoint(x: iconSize * 0.5, y: iconSize * 0.5)
+            )
+            heartPath.addCurve(
+                to: CGPoint(x: 0, y: -iconSize * 0.5),
+                control1: CGPoint(x: iconSize * 0.5, y: -iconSize * 0.2),
+                control2: CGPoint(x: iconSize * 0.1, y: -iconSize * 0.5)
+            )
+            let heart = SKShapeNode(path: heartPath)
             heart.fillColor = .white
             heart.strokeColor = .clear
             container.addChild(heart)
 
-            let plus = SKShapeNode(rectOf: CGSize(width: iconSize * 0.4, height: 3))
-            plus.fillColor = upgrade.color
-            plus.strokeColor = .clear
-            container.addChild(plus)
-            let plusV = SKShapeNode(rectOf: CGSize(width: 3, height: iconSize * 0.4))
-            plusV.fillColor = upgrade.color
-            plusV.strokeColor = .clear
-            container.addChild(plusV)
-
         case .moveSpeed:
-            // Running figure / speed lines
-            let body = SKShapeNode(circleOfRadius: 5)
-            body.fillColor = .white
-            body.strokeColor = .clear
-            body.position = CGPoint(x: 3, y: 4)
-            container.addChild(body)
+            // Wind/speed swoosh icon
+            let swooshPath = CGMutablePath()
+            swooshPath.move(to: CGPoint(x: -iconSize * 0.6, y: iconSize * 0.3))
+            swooshPath.addQuadCurve(
+                to: CGPoint(x: iconSize * 0.6, y: 0),
+                control: CGPoint(x: 0, y: iconSize * 0.4)
+            )
+            swooshPath.addLine(to: CGPoint(x: iconSize * 0.3, y: -iconSize * 0.15))
+            swooshPath.addQuadCurve(
+                to: CGPoint(x: -iconSize * 0.4, y: iconSize * 0.1),
+                control: CGPoint(x: -iconSize * 0.1, y: iconSize * 0.15)
+            )
+            swooshPath.closeSubpath()
+            let swoosh = SKShapeNode(path: swooshPath)
+            swoosh.fillColor = .white
+            swoosh.strokeColor = .clear
+            container.addChild(swoosh)
 
+            // Add speed lines
             for i in 0..<3 {
-                let line = SKShapeNode(rectOf: CGSize(width: 8 - CGFloat(i) * 2, height: 2))
-                line.fillColor = .white.withAlphaComponent(1.0 - CGFloat(i) * 0.3)
+                let line = SKShapeNode(rectOf: CGSize(width: 10 - CGFloat(i) * 2, height: 2))
+                line.fillColor = .white.withAlphaComponent(0.8 - CGFloat(i) * 0.25)
                 line.strokeColor = .clear
-                line.position = CGPoint(x: -8 - CGFloat(i) * 4, y: CGFloat(i - 1) * 4)
+                line.position = CGPoint(x: -iconSize * 0.5 - CGFloat(i) * 5, y: -iconSize * 0.3 + CGFloat(i) * 3)
                 container.addChild(line)
             }
 
@@ -1060,32 +1085,95 @@ class UpgradeCard: SKNode {
             }
 
         case .lifeSteal:
-            // Fang/vampire icon
-            let fang1 = SKShapeNode(rectOf: CGSize(width: 4, height: iconSize))
-            fang1.fillColor = .white
-            fang1.strokeColor = .clear
-            fang1.position = CGPoint(x: -5, y: -2)
-            container.addChild(fang1)
-            let fang2 = SKShapeNode(rectOf: CGSize(width: 4, height: iconSize))
-            fang2.fillColor = .white
-            fang2.strokeColor = .clear
-            fang2.position = CGPoint(x: 5, y: -2)
-            container.addChild(fang2)
+            // Blood drop with heart inside
+            let dropPath = CGMutablePath()
+            dropPath.move(to: CGPoint(x: 0, y: iconSize * 0.7))
+            dropPath.addCurve(
+                to: CGPoint(x: iconSize * 0.5, y: -iconSize * 0.1),
+                control1: CGPoint(x: 0, y: iconSize * 0.4),
+                control2: CGPoint(x: iconSize * 0.5, y: iconSize * 0.2)
+            )
+            dropPath.addCurve(
+                to: CGPoint(x: 0, y: -iconSize * 0.6),
+                control1: CGPoint(x: iconSize * 0.5, y: -iconSize * 0.4),
+                control2: CGPoint(x: iconSize * 0.2, y: -iconSize * 0.6)
+            )
+            dropPath.addCurve(
+                to: CGPoint(x: -iconSize * 0.5, y: -iconSize * 0.1),
+                control1: CGPoint(x: -iconSize * 0.2, y: -iconSize * 0.6),
+                control2: CGPoint(x: -iconSize * 0.5, y: -iconSize * 0.4)
+            )
+            dropPath.addCurve(
+                to: CGPoint(x: 0, y: iconSize * 0.7),
+                control1: CGPoint(x: -iconSize * 0.5, y: iconSize * 0.2),
+                control2: CGPoint(x: 0, y: iconSize * 0.4)
+            )
+            let drop = SKShapeNode(path: dropPath)
+            drop.fillColor = .white
+            drop.strokeColor = .clear
+            container.addChild(drop)
+
+            // Small heart inside the drop
+            let miniHeart = SKShapeNode(circleOfRadius: 4)
+            miniHeart.fillColor = upgrade.color
+            miniHeart.strokeColor = .clear
+            miniHeart.position = CGPoint(x: 0, y: -iconSize * 0.15)
+            container.addChild(miniHeart)
 
         case .armor:
-            let chestplate = SKShapeNode(rectOf: CGSize(width: iconSize * 1.2, height: iconSize))
-            chestplate.fillColor = .white.withAlphaComponent(0.3)
-            chestplate.strokeColor = .white
-            chestplate.lineWidth = 2
-            container.addChild(chestplate)
+            // Shield/armor icon
+            let shieldPath = CGMutablePath()
+            shieldPath.move(to: CGPoint(x: 0, y: iconSize * 0.7))
+            shieldPath.addLine(to: CGPoint(x: iconSize * 0.6, y: iconSize * 0.4))
+            shieldPath.addLine(to: CGPoint(x: iconSize * 0.6, y: -iconSize * 0.1))
+            shieldPath.addCurve(
+                to: CGPoint(x: 0, y: -iconSize * 0.7),
+                control1: CGPoint(x: iconSize * 0.6, y: -iconSize * 0.4),
+                control2: CGPoint(x: iconSize * 0.3, y: -iconSize * 0.65)
+            )
+            shieldPath.addCurve(
+                to: CGPoint(x: -iconSize * 0.6, y: -iconSize * 0.1),
+                control1: CGPoint(x: -iconSize * 0.3, y: -iconSize * 0.65),
+                control2: CGPoint(x: -iconSize * 0.6, y: -iconSize * 0.4)
+            )
+            shieldPath.addLine(to: CGPoint(x: -iconSize * 0.6, y: iconSize * 0.4))
+            shieldPath.closeSubpath()
+            let shield = SKShapeNode(path: shieldPath)
+            shield.fillColor = .white.withAlphaComponent(0.3)
+            shield.strokeColor = .white
+            shield.lineWidth = 2
+            container.addChild(shield)
+
+            // Add cross pattern on shield
+            let crossH = SKShapeNode(rectOf: CGSize(width: iconSize * 0.6, height: 3))
+            crossH.fillColor = .white
+            crossH.strokeColor = .clear
+            crossH.position = CGPoint(x: 0, y: 0)
+            container.addChild(crossH)
+            let crossV = SKShapeNode(rectOf: CGSize(width: 3, height: iconSize * 0.6))
+            crossV.fillColor = .white
+            crossV.strokeColor = .clear
+            crossV.position = CGPoint(x: 0, y: 0)
+            container.addChild(crossV)
 
         case .multishot:
-            for offset: CGFloat in [-8, 0, 8] {
-                let bullet = SKShapeNode(circleOfRadius: 4)
-                bullet.fillColor = .white
-                bullet.strokeColor = .clear
-                bullet.position = CGPoint(x: offset, y: 0)
-                container.addChild(bullet)
+            // Three arrows spreading out
+            let angles: [CGFloat] = [-0.4, 0, 0.4]
+            for angle in angles {
+                let arrowPath = CGMutablePath()
+                arrowPath.move(to: CGPoint(x: iconSize * 0.5, y: 0))
+                arrowPath.addLine(to: CGPoint(x: iconSize * 0.2, y: 3))
+                arrowPath.addLine(to: CGPoint(x: iconSize * 0.2, y: 1))
+                arrowPath.addLine(to: CGPoint(x: -iconSize * 0.5, y: 1))
+                arrowPath.addLine(to: CGPoint(x: -iconSize * 0.5, y: -1))
+                arrowPath.addLine(to: CGPoint(x: iconSize * 0.2, y: -1))
+                arrowPath.addLine(to: CGPoint(x: iconSize * 0.2, y: -3))
+                arrowPath.closeSubpath()
+                let arrow = SKShapeNode(path: arrowPath)
+                arrow.fillColor = .white
+                arrow.strokeColor = .clear
+                arrow.zRotation = angle
+                container.addChild(arrow)
             }
 
         default:

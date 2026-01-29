@@ -384,7 +384,7 @@ enum UpgradeType: String, CaseIterable, Codable {
         case .attackRange: return "+30 Range"
         case .projectileSpeed: return "+50 Proj Speed"
         case .armor: return "+5 Armor"
-        case .lifeSteal: return "+3% Life Steal"
+        case .lifeSteal: return "+2% Life Steal"
         case .dash: return "Quick dash ability"
         case .aoeBlast: return "Area damage blast"
         case .shield: return "Temporary shield"

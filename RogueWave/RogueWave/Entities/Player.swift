@@ -1453,7 +1453,7 @@ class Player: SKNode {
             stats.armor += 5
 
         case .lifeSteal:
-            stats.lifeSteal += 0.03
+            stats.lifeSteal = min(stats.lifeSteal + 0.02, 0.15)  // Cap at 15%
 
         case .dash:
             abilities.hasDash = true

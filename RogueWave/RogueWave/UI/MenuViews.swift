@@ -166,39 +166,55 @@ class AchievementsView: SubMenuView {
         visibleHeight = size.height - 200  // Visible area for scrolling
 
         // Progress header (fixed, not scrolling) - add FIRST so it's behind
-        let headerBg = SKShapeNode(rectOf: CGSize(width: 300, height: 70))
+        let headerBg = SKShapeNode(rectOf: CGSize(width: 300, height: 75))
         headerBg.fillColor = SKColor(red: 0.08, green: 0.1, blue: 0.15, alpha: 1.0)
         headerBg.strokeColor = .clear
-        headerBg.position = CGPoint(x: 0, y: visibleHeight / 2 - 35)
+        headerBg.position = CGPoint(x: 0, y: visibleHeight / 2 - 38)
         headerBg.zPosition = 10  // Above scroll content
         content.addChild(headerBg)
 
-        let progress = AchievementManager.shared.getProgress()
+        // Count visible achievements (unlocked + non-hidden locked)
+        let allAchievements = AchievementManager.shared.getAllAchievements()
+        let unlockedCount = allAchievements.filter { $0.isUnlocked }.count
+        let visibleCount = allAchievements.filter { $0.isUnlocked || !$0.isHidden }.count
+        let hiddenCount = allAchievements.filter { $0.isHidden && !$0.isUnlocked }.count
+
         let progressLabel = SKLabelNode(fontNamed: UIConfig.fontName)
-        progressLabel.text = "\(progress.unlocked) / \(progress.total) Unlocked"
-        progressLabel.fontSize = 16
-        progressLabel.fontColor = SKColor(red: 0.3, green: 0.7, blue: 1.0, alpha: 1.0)
-        progressLabel.position = CGPoint(x: 0, y: visibleHeight / 2 - 20)
+        progressLabel.text = "\(unlockedCount) Unlocked"
+        progressLabel.fontSize = 18
+        progressLabel.fontColor = SKColor(red: 0.3, green: 0.8, blue: 0.4, alpha: 1.0)
+        progressLabel.position = CGPoint(x: 0, y: visibleHeight / 2 - 18)
         progressLabel.zPosition = 11
         content.addChild(progressLabel)
 
-        // Progress bar
+        // Progress bar based on visible achievements
         let barWidth: CGFloat = 200
         let barBg = SKShapeNode(rectOf: CGSize(width: barWidth, height: 8), cornerRadius: 4)
         barBg.fillColor = SKColor(white: 0.15, alpha: 1.0)
         barBg.strokeColor = .clear
-        barBg.position = CGPoint(x: 0, y: visibleHeight / 2 - 45)
+        barBg.position = CGPoint(x: 0, y: visibleHeight / 2 - 42)
         barBg.zPosition = 11
         content.addChild(barBg)
 
-        let progressRatio = progress.total > 0 ? CGFloat(progress.unlocked) / CGFloat(progress.total) : 0
+        let progressRatio = visibleCount > 0 ? CGFloat(unlockedCount) / CGFloat(visibleCount) : 0
         let fillWidth = max(barWidth * progressRatio, 8)
         let barFill = SKShapeNode(rectOf: CGSize(width: fillWidth, height: 6), cornerRadius: 3)
         barFill.fillColor = SKColor(red: 0.3, green: 0.7, blue: 0.3, alpha: 1.0)
         barFill.strokeColor = .clear
-        barFill.position = CGPoint(x: (fillWidth - barWidth) / 2, y: visibleHeight / 2 - 45)
+        barFill.position = CGPoint(x: (fillWidth - barWidth) / 2, y: visibleHeight / 2 - 42)
         barFill.zPosition = 12
         content.addChild(barFill)
+
+        // Hidden achievements hint
+        if hiddenCount > 0 {
+            let hiddenLabel = SKLabelNode(fontNamed: UIConfig.fontName)
+            hiddenLabel.text = "+ \(hiddenCount) hidden"
+            hiddenLabel.fontSize = 10
+            hiddenLabel.fontColor = SKColor(white: 0.4, alpha: 1.0)
+            hiddenLabel.position = CGPoint(x: 0, y: visibleHeight / 2 - 60)
+            hiddenLabel.zPosition = 11
+            content.addChild(hiddenLabel)
+        }
 
         // Create a crop node to clip the scrolling content
         let scrollClipHeight = visibleHeight - 90  // Leave room for header
@@ -452,10 +468,11 @@ class CharacterSelectView: SubMenuView {
 
     var onSelect: ((CharacterClass) -> Void)?
     private var selectedClass: CharacterClass
-    private let cardWidth: CGFloat = 130
-    private let cardHeight: CGFloat = 180
-    private let spacing: CGFloat = 15
+    private let cardWidth: CGFloat = 150
+    private let cardHeight: CGFloat = 220
+    private let spacing: CGFloat = 20
     private var cardsContainer: SKNode?
+    private var statsContainer: SKNode?
 
     // Scroll tracking
     private var lastDragX: CGFloat = 0
@@ -469,6 +486,13 @@ class CharacterSelectView: SubMenuView {
 
         let content = createScrollableContent()
 
+        // Stats display at top
+        let stats = SKNode()
+        stats.position = CGPoint(x: 0, y: cardHeight / 2 + 60)
+        content.addChild(stats)
+        statsContainer = stats
+        updateStatsDisplay()
+
         // Create a container for scrollable cards
         let container = SKNode()
         container.name = "cardsContainer"
@@ -480,10 +504,58 @@ class CharacterSelectView: SubMenuView {
         // Add hint
         let hint = SKLabelNode(fontNamed: UIConfig.fontName)
         hint.text = "← Swipe to browse →"
-        hint.fontSize = 12
-        hint.fontColor = SKColor(white: 0.5, alpha: 1.0)
-        hint.position = CGPoint(x: 0, y: -cardHeight / 2 - 40)
+        hint.fontSize = 11
+        hint.fontColor = SKColor(white: 0.45, alpha: 1.0)
+        hint.position = CGPoint(x: 0, y: -cardHeight / 2 - 30)
         content.addChild(hint)
+    }
+
+    private func updateStatsDisplay() {
+        guard let stats = statsContainer else { return }
+        stats.removeAllChildren()
+
+        let charClass = selectedClass
+
+        // Title
+        let title = SKLabelNode(fontNamed: UIConfig.fontName)
+        title.text = charClass.rawValue.uppercased()
+        title.fontSize = 20
+        title.fontColor = charClass.color
+        title.position = CGPoint(x: 0, y: 25)
+        stats.addChild(title)
+
+        // Stats based on character
+        let statsList: [(String, String)]
+        switch charClass {
+        case .knight:
+            statsList = [("HP", "100%"), ("DMG", "100%"), ("SPD", "100%"), ("Ability", "Shield")]
+        case .rogue:
+            statsList = [("HP", "80%"), ("DMG", "100%"), ("SPD", "130%"), ("Crit", "+20%")]
+        case .mage:
+            statsList = [("HP", "70%"), ("DMG", "120%"), ("SPD", "90%"), ("Cooldown", "-30%")]
+        case .berserker:
+            statsList = [("HP", "70%"), ("DMG", "150%"), ("SPD", "100%"), ("Lifesteal", "10%")]
+        }
+
+        let statSpacing: CGFloat = 70
+        let startX = -statSpacing * 1.5
+        for (index, (label, value)) in statsList.enumerated() {
+            let x = startX + CGFloat(index) * statSpacing
+
+            let labelNode = SKLabelNode(fontNamed: UIConfig.fontName)
+            labelNode.text = label
+            labelNode.fontSize = 10
+            labelNode.fontColor = SKColor(white: 0.5, alpha: 1.0)
+            labelNode.position = CGPoint(x: x, y: 0)
+            stats.addChild(labelNode)
+
+            let valueNode = SKLabelNode(fontNamed: UIConfig.fontName)
+            valueNode.text = value
+            valueNode.fontSize = 12
+            valueNode.fontColor = .white
+            valueNode.position = CGPoint(x: x, y: -18)
+            stats.addChild(valueNode)
+        }
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -525,6 +597,7 @@ class CharacterSelectView: SubMenuView {
                     if charClass.isUnlocked && charClass != selectedClass {
                         selectedClass = charClass
                         rebuildCards(in: container, preservePosition: true)
+                        updateStatsDisplay()
                         onSelect?(charClass)
                         return true
                     }
@@ -620,77 +693,97 @@ class CharacterSelectView: SubMenuView {
         let card = SKNode()
         let isUnlocked = charClass.isUnlocked
 
-        let bg = SKShapeNode(rectOf: CGSize(width: width, height: height), cornerRadius: 12)
+        // Background with gradient feel
+        let bg = SKShapeNode(rectOf: CGSize(width: width, height: height), cornerRadius: 15)
         bg.fillColor = isUnlocked ?
-            (isSelected ? charClass.color.withAlphaComponent(0.3) : SKColor(red: 0.1, green: 0.12, blue: 0.15, alpha: 1.0)) :
-            SKColor(red: 0.08, green: 0.08, blue: 0.1, alpha: 1.0)
-        bg.strokeColor = isSelected ? charClass.color : SKColor(white: 0.2, alpha: 1.0)
+            (isSelected ? charClass.color.withAlphaComponent(0.25) : SKColor(red: 0.08, green: 0.1, blue: 0.14, alpha: 1.0)) :
+            SKColor(red: 0.06, green: 0.06, blue: 0.08, alpha: 1.0)
+        bg.strokeColor = isSelected ? charClass.color : SKColor(white: 0.18, alpha: 1.0)
         bg.lineWidth = isSelected ? 3 : 1
-        if isSelected { bg.glowWidth = 5 }
+        if isSelected { bg.glowWidth = 8 }
         card.addChild(bg)
 
-        // Character portrait
+        // Inner highlight for selected
+        if isSelected {
+            let innerBg = SKShapeNode(rectOf: CGSize(width: width - 8, height: height - 8), cornerRadius: 12)
+            innerBg.fillColor = .clear
+            innerBg.strokeColor = charClass.color.withAlphaComponent(0.3)
+            innerBg.lineWidth = 2
+            card.addChild(innerBg)
+        }
+
+        // Character portrait - larger
         let iconContainer = SKNode()
-        iconContainer.position = CGPoint(x: 0, y: height / 2 - 50)
+        iconContainer.position = CGPoint(x: 0, y: height / 2 - 65)
         card.addChild(iconContainer)
 
         if isUnlocked {
-            createCharacterPortrait(for: charClass, in: iconContainer, scale: 0.7)
+            createCharacterPortrait(for: charClass, in: iconContainer, scale: 0.85)
         } else {
             // Locked character - show silhouette with lock
-            let silhouette = SKShapeNode(circleOfRadius: 30)
-            silhouette.fillColor = SKColor(white: 0.15, alpha: 1.0)
-            silhouette.strokeColor = SKColor(white: 0.25, alpha: 1.0)
+            let silhouette = SKShapeNode(circleOfRadius: 35)
+            silhouette.fillColor = SKColor(white: 0.12, alpha: 1.0)
+            silhouette.strokeColor = SKColor(white: 0.2, alpha: 1.0)
             silhouette.lineWidth = 2
             iconContainer.addChild(silhouette)
 
             let lock = SKLabelNode(fontNamed: UIConfig.fontName)
             lock.text = "🔒"
-            lock.fontSize = 24
+            lock.fontSize = 28
             lock.verticalAlignmentMode = .center
             silhouette.addChild(lock)
         }
 
-        // Name
+        // Name with color accent for selected
         let name = SKLabelNode(fontNamed: UIConfig.fontName)
         name.text = charClass.rawValue
-        name.fontSize = 16
-        name.fontColor = isUnlocked ? .white : SKColor(white: 0.4, alpha: 1.0)
-        name.position = CGPoint(x: 0, y: height / 2 - 100)
+        name.fontSize = 18
+        name.fontColor = isUnlocked ? (isSelected ? charClass.color : .white) : SKColor(white: 0.35, alpha: 1.0)
+        name.position = CGPoint(x: 0, y: height / 2 - 125)
         card.addChild(name)
 
-        // Description
+        // Description or unlock requirement
         let desc = SKLabelNode(fontNamed: UIConfig.fontName)
         desc.text = isUnlocked ? charClass.description : charClass.unlockRequirement
-        desc.fontSize = 9
+        desc.fontSize = 10
         desc.fontColor = SKColor(white: 0.5, alpha: 1.0)
-        desc.preferredMaxLayoutWidth = width - 20
+        desc.preferredMaxLayoutWidth = width - 24
         desc.numberOfLines = 3
-        desc.position = CGPoint(x: 0, y: height / 2 - 130)
+        desc.position = CGPoint(x: 0, y: height / 2 - 160)
         card.addChild(desc)
 
-        // Select button or Selected label
+        // Select button or Selected indicator
         if isUnlocked && !isSelected {
-            let selectBtn = SKShapeNode(rectOf: CGSize(width: 80, height: 25), cornerRadius: 12)
+            let selectBtn = SKShapeNode(rectOf: CGSize(width: 90, height: 30), cornerRadius: 15)
             selectBtn.fillColor = charClass.color
-            selectBtn.strokeColor = .clear
-            selectBtn.position = CGPoint(x: 0, y: -height / 2 + 25)
+            selectBtn.strokeColor = charClass.color.withAlphaComponent(0.5)
+            selectBtn.lineWidth = 2
+            selectBtn.position = CGPoint(x: 0, y: -height / 2 + 30)
             selectBtn.name = "selectBtn_\(charClass.rawValue)"
             card.addChild(selectBtn)
 
             let selectLabel = SKLabelNode(fontNamed: UIConfig.fontName)
             selectLabel.text = "SELECT"
-            selectLabel.fontSize = 11
+            selectLabel.fontSize = 12
             selectLabel.fontColor = .white
             selectLabel.verticalAlignmentMode = .center
             selectBtn.addChild(selectLabel)
         } else if isSelected {
-            let selectedLabel = SKLabelNode(fontNamed: UIConfig.fontName)
-            selectedLabel.text = "SELECTED"
-            selectedLabel.fontSize = 11
-            selectedLabel.fontColor = charClass.color
-            selectedLabel.position = CGPoint(x: 0, y: -height / 2 + 25)
-            card.addChild(selectedLabel)
+            // Checkmark indicator
+            let checkBg = SKShapeNode(circleOfRadius: 14)
+            checkBg.fillColor = charClass.color
+            checkBg.strokeColor = .white
+            checkBg.lineWidth = 2
+            checkBg.position = CGPoint(x: 0, y: -height / 2 + 30)
+            checkBg.glowWidth = 3
+            card.addChild(checkBg)
+
+            let check = SKLabelNode(fontNamed: UIConfig.fontName)
+            check.text = "✓"
+            check.fontSize = 16
+            check.fontColor = .white
+            check.verticalAlignmentMode = .center
+            checkBg.addChild(check)
         }
 
         return card
@@ -872,9 +965,28 @@ class UpgradesView: SubMenuView {
 
         let content = createScrollableContent()
 
-        let itemHeight: CGFloat = 70
+        // Gold display at top
+        let goldContainer = SKNode()
+        goldContainer.position = CGPoint(x: 0, y: 180)
+        content.addChild(goldContainer)
+
+        let goldBg = SKShapeNode(rectOf: CGSize(width: 140, height: 36), cornerRadius: 18)
+        goldBg.fillColor = SKColor(red: 0.15, green: 0.12, blue: 0.05, alpha: 1.0)
+        goldBg.strokeColor = SKColor(red: 0.8, green: 0.6, blue: 0.2, alpha: 1.0)
+        goldBg.lineWidth = 2
+        goldContainer.addChild(goldBg)
+
+        let gold = SKLabelNode(fontNamed: UIConfig.fontName)
+        gold.text = "💰 \(GameManager.shared.metaProgression.totalGold)"
+        gold.fontSize = 16
+        gold.fontColor = SKColor(red: 1.0, green: 0.85, blue: 0.3, alpha: 1.0)
+        gold.verticalAlignmentMode = .center
+        goldContainer.addChild(gold)
+        goldLabel = gold
+
+        let itemHeight: CGFloat = 55
         let upgrades = PermanentUpgrade.allCases
-        let startY: CGFloat = CGFloat(upgrades.count) / 2 * itemHeight - 20
+        let startY: CGFloat = 140
 
         for (index, upgrade) in upgrades.enumerated() {
             let y = startY - CGFloat(index) * itemHeight
@@ -885,32 +997,12 @@ class UpgradesView: SubMenuView {
             upgradeRows[upgrade] = row
         }
 
-        // Gold display with better styling
-        let goldContainer = SKNode()
-        goldContainer.position = CGPoint(x: 0, y: -startY - 55)
-        content.addChild(goldContainer)
-
-        let goldBg = SKShapeNode(rectOf: CGSize(width: 160, height: 40), cornerRadius: 20)
-        goldBg.fillColor = SKColor(red: 0.12, green: 0.1, blue: 0.05, alpha: 1.0)
-        goldBg.strokeColor = SKColor(red: 0.7, green: 0.55, blue: 0.2, alpha: 1.0)
-        goldBg.lineWidth = 2
-        goldBg.glowWidth = 2
-        goldContainer.addChild(goldBg)
-
-        let gold = SKLabelNode(fontNamed: UIConfig.fontName)
-        gold.text = "💰 \(GameManager.shared.metaProgression.totalGold)"
-        gold.fontSize = 18
-        gold.fontColor = SKColor(red: 1.0, green: 0.85, blue: 0.3, alpha: 1.0)
-        gold.verticalAlignmentMode = .center
-        goldContainer.addChild(gold)
-        goldLabel = gold
-
-        // Instructions
+        // Instructions at bottom
         let hint = SKLabelNode(fontNamed: UIConfig.fontName)
-        hint.text = "Tap to buy • Long press to refund (75%)"
+        hint.text = "Tap row to buy • Tap ↩ to refund (75%)"
         hint.fontSize = 10
-        hint.fontColor = SKColor(white: 0.45, alpha: 1.0)
-        hint.position = CGPoint(x: 0, y: -startY - 90)
+        hint.fontColor = SKColor(white: 0.4, alpha: 1.0)
+        hint.position = CGPoint(x: 0, y: startY - CGFloat(upgrades.count) * itemHeight - 20)
         content.addChild(hint)
     }
 
@@ -928,16 +1020,16 @@ class UpgradesView: SubMenuView {
             if let row = upgradeRows[upgrade] {
                 let rowLocation = row.convert(contentLocation, from: content)
 
-                // Check refund button first (it's on the right side)
+                // Check refund button first (positioned at x: 130)
                 if let refundBtn = refundButtons[upgrade] {
                     let refundLocation = refundBtn.convert(rowLocation, from: row)
-                    if abs(refundLocation.x) < 14 && abs(refundLocation.y) < 14 {
+                    if abs(refundLocation.x) < 12 && abs(refundLocation.y) < 12 {
                         return attemptRefund(upgrade)
                     }
                 }
 
-                // Check main row for purchase (exclude refund button area)
-                if abs(rowLocation.x) < 140 && abs(rowLocation.y) < 35 && rowLocation.x < 110 {
+                // Check main row for purchase (exclude refund button area on right)
+                if abs(rowLocation.x) < 145 && abs(rowLocation.y) < 26 && rowLocation.x < 115 {
                     return attemptPurchase(upgrade)
                 }
             }
@@ -993,97 +1085,106 @@ class UpgradesView: SubMenuView {
         let cost = isMaxed ? 0 : upgrade.cost(forLevel: level)
 
         // Background
-        let bg = SKShapeNode(rectOf: CGSize(width: 280, height: 65), cornerRadius: 10)
+        let bg = SKShapeNode(rectOf: CGSize(width: 290, height: 48), cornerRadius: 8)
         if isMaxed {
-            bg.fillColor = SKColor(red: 0.1, green: 0.15, blue: 0.1, alpha: 1.0)
-            bg.strokeColor = SKColor(red: 0.3, green: 0.6, blue: 0.3, alpha: 1.0)
+            bg.fillColor = SKColor(red: 0.08, green: 0.14, blue: 0.08, alpha: 1.0)
+            bg.strokeColor = SKColor(red: 0.25, green: 0.5, blue: 0.25, alpha: 1.0)
         } else if canAfford {
-            bg.fillColor = SKColor(red: 0.12, green: 0.12, blue: 0.18, alpha: 1.0)
-            bg.strokeColor = SKColor(red: 0.3, green: 0.5, blue: 0.8, alpha: 1.0)
+            bg.fillColor = SKColor(red: 0.1, green: 0.1, blue: 0.15, alpha: 1.0)
+            bg.strokeColor = SKColor(red: 0.25, green: 0.4, blue: 0.7, alpha: 1.0)
         } else {
-            bg.fillColor = SKColor(red: 0.08, green: 0.08, blue: 0.1, alpha: 1.0)
-            bg.strokeColor = SKColor(white: 0.2, alpha: 1.0)
+            bg.fillColor = SKColor(red: 0.06, green: 0.06, blue: 0.08, alpha: 1.0)
+            bg.strokeColor = SKColor(white: 0.18, alpha: 1.0)
         }
         bg.lineWidth = canAfford && !isMaxed ? 2 : 1
         row.addChild(bg)
 
-        // Name
+        // Left side: Name and description
         let nameLabel = SKLabelNode(fontNamed: UIConfig.fontName)
         nameLabel.text = upgrade.displayName
-        nameLabel.fontSize = 14
+        nameLabel.fontSize = 13
         nameLabel.fontColor = isMaxed ? SKColor(red: 0.5, green: 0.8, blue: 0.5, alpha: 1.0) : .white
         nameLabel.horizontalAlignmentMode = .left
-        nameLabel.position = CGPoint(x: -125, y: 12)
+        nameLabel.position = CGPoint(x: -135, y: 6)
         row.addChild(nameLabel)
 
-        // Description
         let descLabel = SKLabelNode(fontNamed: UIConfig.fontName)
         descLabel.text = upgrade.description
-        descLabel.fontSize = 10
-        descLabel.fontColor = SKColor(white: 0.5, alpha: 1.0)
+        descLabel.fontSize = 9
+        descLabel.fontColor = SKColor(white: 0.45, alpha: 1.0)
         descLabel.horizontalAlignmentMode = .left
-        descLabel.position = CGPoint(x: -125, y: -5)
+        descLabel.position = CGPoint(x: -135, y: -10)
         row.addChild(descLabel)
 
-        // Cost or MAX label
-        let costLabel = SKLabelNode(fontNamed: UIConfig.fontName)
-        if isMaxed {
-            costLabel.text = "MAX"
-            costLabel.fontColor = SKColor(red: 0.5, green: 0.8, blue: 0.5, alpha: 1.0)
-        } else {
-            costLabel.text = "💰 \(cost)"
-            costLabel.fontColor = canAfford ?
-                SKColor(red: 1.0, green: 0.85, blue: 0.3, alpha: 1.0) :
-                SKColor(red: 0.5, green: 0.4, blue: 0.3, alpha: 1.0)
-        }
-        costLabel.fontSize = 12
-        costLabel.horizontalAlignmentMode = .left
-        costLabel.position = CGPoint(x: -125, y: -22)
-        row.addChild(costLabel)
+        // Center: Progress bar instead of circles
+        let barWidth: CGFloat = 60
+        let barHeight: CGFloat = 8
+        let barX: CGFloat = 30
 
-        // Level pips on right side
-        let pipSpacing: CGFloat = 12
-        let pipSize: CGFloat = 6
-        let totalPipWidth = CGFloat(maxLevel - 1) * pipSpacing
-        let startX: CGFloat = 125 - totalPipWidth
+        let barBg = SKShapeNode(rectOf: CGSize(width: barWidth, height: barHeight), cornerRadius: 4)
+        barBg.fillColor = SKColor(white: 0.12, alpha: 1.0)
+        barBg.strokeColor = SKColor(white: 0.25, alpha: 1.0)
+        barBg.lineWidth = 1
+        barBg.position = CGPoint(x: barX, y: 0)
+        row.addChild(barBg)
 
-        for i in 0..<maxLevel {
-            let pip = SKShapeNode(circleOfRadius: pipSize)
-            pip.fillColor = i < level ?
-                SKColor(red: 0.3, green: 0.7, blue: 1.0, alpha: 1.0) :
-                SKColor(white: 0.15, alpha: 1.0)
-            pip.strokeColor = i < level ?
-                SKColor(red: 0.5, green: 0.8, blue: 1.0, alpha: 1.0) :
-                SKColor(white: 0.3, alpha: 1.0)
-            pip.lineWidth = 1
-            pip.position = CGPoint(x: startX + CGFloat(i) * pipSpacing, y: 0)
-            if i < level { pip.glowWidth = 2 }
-            row.addChild(pip)
+        // Filled portion
+        if level > 0 {
+            let fillRatio = CGFloat(level) / CGFloat(maxLevel)
+            let fillWidth = max((barWidth - 4) * fillRatio, 4)
+            let barFill = SKShapeNode(rectOf: CGSize(width: fillWidth, height: barHeight - 4), cornerRadius: 2)
+            barFill.fillColor = isMaxed ?
+                SKColor(red: 0.3, green: 0.7, blue: 0.3, alpha: 1.0) :
+                SKColor(red: 0.3, green: 0.6, blue: 1.0, alpha: 1.0)
+            barFill.strokeColor = .clear
+            barFill.position = CGPoint(x: barX - (barWidth - fillWidth) / 2 + 2, y: 0)
+            if level > 0 { barFill.glowWidth = 1 }
+            row.addChild(barFill)
         }
 
-        // Level text
+        // Level text below bar
         let levelLabel = SKLabelNode(fontNamed: UIConfig.fontName)
         levelLabel.text = "\(level)/\(maxLevel)"
-        levelLabel.fontSize = 10
-        levelLabel.fontColor = SKColor(white: 0.5, alpha: 1.0)
-        levelLabel.horizontalAlignmentMode = .right
-        levelLabel.position = CGPoint(x: 125, y: -22)
+        levelLabel.fontSize = 9
+        levelLabel.fontColor = isMaxed ? SKColor(red: 0.5, green: 0.8, blue: 0.5, alpha: 1.0) : SKColor(white: 0.5, alpha: 1.0)
+        levelLabel.position = CGPoint(x: barX, y: -16)
         row.addChild(levelLabel)
 
-        // Refund button (only show if level > 0)
+        // Right side: Cost and refund button
+        if isMaxed {
+            let maxLabel = SKLabelNode(fontNamed: UIConfig.fontName)
+            maxLabel.text = "MAX"
+            maxLabel.fontSize = 12
+            maxLabel.fontColor = SKColor(red: 0.5, green: 0.8, blue: 0.5, alpha: 1.0)
+            maxLabel.horizontalAlignmentMode = .right
+            maxLabel.position = CGPoint(x: 110, y: -3)
+            row.addChild(maxLabel)
+        } else {
+            let costLabel = SKLabelNode(fontNamed: UIConfig.fontName)
+            costLabel.text = "💰\(cost)"
+            costLabel.fontSize = 11
+            costLabel.fontColor = canAfford ?
+                SKColor(red: 1.0, green: 0.85, blue: 0.3, alpha: 1.0) :
+                SKColor(red: 0.45, green: 0.35, blue: 0.25, alpha: 1.0)
+            costLabel.horizontalAlignmentMode = .right
+            costLabel.position = CGPoint(x: 110, y: -3)
+            row.addChild(costLabel)
+        }
+
+        // Refund button (show only if level > 0)
         if level > 0 {
-            let refundBtn = SKShapeNode(rectOf: CGSize(width: 24, height: 24), cornerRadius: 4)
-            refundBtn.fillColor = SKColor(red: 0.5, green: 0.2, blue: 0.2, alpha: 0.8)
-            refundBtn.strokeColor = SKColor(red: 0.7, green: 0.3, blue: 0.3, alpha: 1.0)
+            let refundBtn = SKShapeNode(rectOf: CGSize(width: 22, height: 22), cornerRadius: 4)
+            refundBtn.fillColor = SKColor(red: 0.4, green: 0.15, blue: 0.15, alpha: 0.9)
+            refundBtn.strokeColor = SKColor(red: 0.6, green: 0.25, blue: 0.25, alpha: 1.0)
             refundBtn.lineWidth = 1
-            refundBtn.position = CGPoint(x: -125 + 250, y: 12)
+            refundBtn.position = CGPoint(x: 130, y: 0)
             refundBtn.name = "refund_\(upgrade.rawValue)"
             row.addChild(refundBtn)
 
             let refundIcon = SKLabelNode(fontNamed: UIConfig.fontName)
             refundIcon.text = "↩"
-            refundIcon.fontSize = 14
-            refundIcon.fontColor = .white
+            refundIcon.fontSize = 12
+            refundIcon.fontColor = SKColor(red: 1.0, green: 0.7, blue: 0.7, alpha: 1.0)
             refundIcon.verticalAlignmentMode = .center
             refundBtn.addChild(refundIcon)
 
@@ -1129,28 +1230,12 @@ class ChallengesView: SubMenuView {
 
         let content = createScrollableContent()
 
-        // Coming soon message
-        let comingSoon = SKLabelNode(fontNamed: UIConfig.fontName)
-        comingSoon.text = "🚧 COMING SOON 🚧"
-        comingSoon.fontSize = 20
-        comingSoon.fontColor = SKColor(red: 1.0, green: 0.8, blue: 0.3, alpha: 1.0)
-        comingSoon.position = CGPoint(x: 0, y: 120)
-        content.addChild(comingSoon)
-
-        let desc = SKLabelNode(fontNamed: UIConfig.fontName)
-        desc.text = "Daily and weekly challenges\nwill be added in a future update!"
-        desc.fontSize = 14
-        desc.fontColor = SKColor(white: 0.6, alpha: 1.0)
-        desc.numberOfLines = 2
-        desc.position = CGPoint(x: 0, y: 80)
-        content.addChild(desc)
-
         // Show current goals based on stats
         let goalsTitle = SKLabelNode(fontNamed: UIConfig.fontName)
         goalsTitle.text = "Current Goals"
-        goalsTitle.fontSize = 16
+        goalsTitle.fontSize = 18
         goalsTitle.fontColor = .white
-        goalsTitle.position = CGPoint(x: 0, y: 30)
+        goalsTitle.position = CGPoint(x: 0, y: 160)
         content.addChild(goalsTitle)
 
         let stats = GameManager.shared.metaProgression
@@ -1165,7 +1250,7 @@ class ChallengesView: SubMenuView {
             color: SKColor(red: 0.3, green: 0.7, blue: 0.4, alpha: 1.0),
             isComplete: goal1Progress >= 10
         )
-        goal1Card.position = CGPoint(x: 0, y: -30)
+        goal1Card.position = CGPoint(x: 0, y: 100)
         content.addChild(goal1Card)
 
         // Goal 2: Kill 100 enemies total
@@ -1178,7 +1263,7 @@ class ChallengesView: SubMenuView {
             color: SKColor(red: 0.8, green: 0.4, blue: 0.3, alpha: 1.0),
             isComplete: goal2Progress >= 100
         )
-        goal2Card.position = CGPoint(x: 0, y: -110)
+        goal2Card.position = CGPoint(x: 0, y: 25)
         content.addChild(goal2Card)
 
         // Goal 3: Complete 5 runs
@@ -1191,8 +1276,29 @@ class ChallengesView: SubMenuView {
             color: SKColor(red: 0.5, green: 0.5, blue: 0.8, alpha: 1.0),
             isComplete: goal3Progress >= 5
         )
-        goal3Card.position = CGPoint(x: 0, y: -190)
+        goal3Card.position = CGPoint(x: 0, y: -50)
         content.addChild(goal3Card)
+
+        // Coming soon section
+        let divider = SKShapeNode(rectOf: CGSize(width: 200, height: 1))
+        divider.fillColor = SKColor(white: 0.2, alpha: 1.0)
+        divider.strokeColor = .clear
+        divider.position = CGPoint(x: 0, y: -110)
+        content.addChild(divider)
+
+        let comingSoon = SKLabelNode(fontNamed: UIConfig.fontName)
+        comingSoon.text = "Daily Challenges"
+        comingSoon.fontSize = 14
+        comingSoon.fontColor = SKColor(red: 1.0, green: 0.8, blue: 0.3, alpha: 1.0)
+        comingSoon.position = CGPoint(x: 0, y: -140)
+        content.addChild(comingSoon)
+
+        let desc = SKLabelNode(fontNamed: UIConfig.fontName)
+        desc.text = "Coming in a future update!"
+        desc.fontSize = 11
+        desc.fontColor = SKColor(white: 0.5, alpha: 1.0)
+        desc.position = CGPoint(x: 0, y: -160)
+        content.addChild(desc)
     }
 
     private func createGoalCard(title: String, description: String, progress: String, progressRatio: CGFloat, color: SKColor, isComplete: Bool) -> SKNode {

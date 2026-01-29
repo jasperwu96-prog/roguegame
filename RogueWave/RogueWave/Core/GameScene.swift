@@ -286,11 +286,16 @@ class GameScene: SKScene {
         shadow.zPosition = -1
         tree.addChild(shadow)
 
-        // Add physics for collision (optional - trees as obstacles)
-        let treeBody = SKPhysicsBody(circleOfRadius: trunkWidth / 2)
+        // Add physics for collision - make it larger so player can't walk through
+        // Use a larger radius based on trunk width for solid collision
+        let collisionRadius = trunkWidth * 1.5
+        let treeBody = SKPhysicsBody(circleOfRadius: collisionRadius)
         treeBody.isDynamic = false
         treeBody.categoryBitMask = GameConfig.PhysicsCategory.boundary
+        treeBody.contactTestBitMask = GameConfig.PhysicsCategory.none
         treeBody.collisionBitMask = GameConfig.PhysicsCategory.player
+        treeBody.friction = 0
+        treeBody.restitution = 0
         tree.physicsBody = treeBody
 
         return tree
@@ -340,11 +345,14 @@ class GameScene: SKScene {
         shadow.zPosition = -1
         rock.addChild(shadow)
 
-        // Physics body
-        let rockBody = SKPhysicsBody(circleOfRadius: rockSize * 0.8)
+        // Physics body - solid obstacle
+        let rockBody = SKPhysicsBody(circleOfRadius: rockSize)
         rockBody.isDynamic = false
         rockBody.categoryBitMask = GameConfig.PhysicsCategory.boundary
+        rockBody.contactTestBitMask = GameConfig.PhysicsCategory.none
         rockBody.collisionBitMask = GameConfig.PhysicsCategory.player
+        rockBody.friction = 0
+        rockBody.restitution = 0
         rock.physicsBody = rockBody
 
         return rock
@@ -455,7 +463,8 @@ class GameScene: SKScene {
 
     private func updateSpawnBoundsAroundPlayer() {
         // Create spawn bounds centered on player position
-        let spawnRadius: CGFloat = 500
+        // Reduced radius so enemies spawn closer and get in attack range faster
+        let spawnRadius: CGFloat = 350
         waveManager.spawnBounds = CGRect(
             x: player.position.x - spawnRadius,
             y: player.position.y - spawnRadius,

@@ -48,8 +48,8 @@ enum PlayerConfig {
     static let baseSpeed: CGFloat = 200
     static let baseDamage: CGFloat = 10
     static let baseAttackSpeed: CGFloat = 1.0  // attacks per second
-    static let baseAttackRange: CGFloat = 300
-    static let baseProjectileSpeed: CGFloat = 400
+    static let baseAttackRange: CGFloat = 400  // Increased for open world
+    static let baseProjectileSpeed: CGFloat = 500  // Faster projectiles
     static let baseCritChance: CGFloat = 0.05
     static let baseCritMultiplier: CGFloat = 2.0
 

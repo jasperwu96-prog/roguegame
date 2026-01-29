@@ -121,6 +121,9 @@ class Player: SKNode {
 
     weak var delegate: PlayerDelegate?
 
+    // Character class
+    let characterClass: CharacterClass
+
     // Visual components
     private var spriteNode: SKShapeNode!
     private var shieldNode: SKShapeNode?
@@ -146,8 +149,10 @@ class Player: SKNode {
 
     // MARK: - Initialization
 
-    override init() {
+    init(characterClass: CharacterClass = .knight) {
+        self.characterClass = characterClass
         super.init()
+        applyCharacterStats()
         setupVisuals()
         setupPhysics()
     }
@@ -156,15 +161,61 @@ class Player: SKNode {
         fatalError("init(coder:) has not been implemented")
     }
 
+    // MARK: - Character Stats
+
+    private func applyCharacterStats() {
+        switch characterClass {
+        case .knight:
+            // Balanced - default stats, starts with Shield ability
+            abilities.hasShield = true
+
+        case .rogue:
+            // +30% Speed, +20% Crit, -25% HP
+            stats.speed *= 1.3
+            stats.critChance += 0.2
+            stats.maxHealth *= 0.75
+            stats.currentHealth = stats.maxHealth
+
+        case .mage:
+            // Faster ability cooldowns, higher crit damage
+            stats.critMultiplier += 0.5
+            abilities.hasAOE = true  // Starts with AOE
+
+        case .berserker:
+            // +50% Damage, starts with life steal, -30% HP
+            stats.damage *= 1.5
+            stats.lifeSteal = 0.1  // 10% life steal
+            stats.maxHealth *= 0.7
+            stats.currentHealth = stats.maxHealth
+        }
+    }
+
     // MARK: - Setup
 
     private func setupVisuals() {
-        // Create heroic champion knight
         let size = PlayerConfig.size
 
         // Main body container
         spriteNode = SKShapeNode()
         addChild(spriteNode)
+
+        // Setup character-specific visuals
+        switch characterClass {
+        case .knight:
+            setupKnightVisuals(size: size)
+        case .rogue:
+            setupRogueVisuals(size: size)
+        case .mage:
+            setupMageVisuals(size: size)
+        case .berserker:
+            setupBerserkerVisuals(size: size)
+        }
+
+        zPosition = GameConfig.ZPosition.player
+    }
+
+    private func setupKnightVisuals(size: CGFloat) {
+        // Create heroic champion knight
 
         // Cape (behind everything)
         let capePath = CGMutablePath()
@@ -355,8 +406,333 @@ class Player: SKNode {
         rightPauldron.lineWidth = 2
         rightPauldron.position = CGPoint(x: size * 0.28, y: size * 0.12)
         spriteNode.addChild(rightPauldron)
+    }
 
-        zPosition = GameConfig.ZPosition.player
+    private func setupRogueVisuals(size: CGFloat) {
+        // Sleek, hooded rogue with daggers
+
+        // Dark cloak (behind everything)
+        let cloakPath = CGMutablePath()
+        cloakPath.move(to: CGPoint(x: -size * 0.3, y: size * 0.15))
+        cloakPath.addQuadCurve(to: CGPoint(x: -size * 0.4, y: -size * 0.5),
+                               control: CGPoint(x: -size * 0.5, y: -size * 0.2))
+        cloakPath.addLine(to: CGPoint(x: size * 0.4, y: -size * 0.5))
+        cloakPath.addQuadCurve(to: CGPoint(x: size * 0.3, y: size * 0.15),
+                               control: CGPoint(x: size * 0.5, y: -size * 0.2))
+        cloakPath.closeSubpath()
+        let cloak = SKShapeNode(path: cloakPath)
+        cloak.fillColor = SKColor(red: 0.15, green: 0.2, blue: 0.15, alpha: 1.0)
+        cloak.strokeColor = SKColor(red: 0.1, green: 0.15, blue: 0.1, alpha: 1.0)
+        cloak.lineWidth = 1
+        cloak.zPosition = -1
+        spriteNode.addChild(cloak)
+
+        // Slim body in leather armor
+        let bodyPath = CGMutablePath()
+        bodyPath.move(to: CGPoint(x: -size * 0.2, y: -size * 0.35))
+        bodyPath.addLine(to: CGPoint(x: -size * 0.25, y: size * 0.1))
+        bodyPath.addLine(to: CGPoint(x: -size * 0.15, y: size * 0.2))
+        bodyPath.addLine(to: CGPoint(x: size * 0.15, y: size * 0.2))
+        bodyPath.addLine(to: CGPoint(x: size * 0.25, y: size * 0.1))
+        bodyPath.addLine(to: CGPoint(x: size * 0.2, y: -size * 0.35))
+        bodyPath.closeSubpath()
+
+        let body = SKShapeNode(path: bodyPath)
+        body.fillColor = SKColor(red: 0.25, green: 0.35, blue: 0.25, alpha: 1.0) // Dark green leather
+        body.strokeColor = SKColor(red: 0.2, green: 0.3, blue: 0.2, alpha: 1.0)
+        body.lineWidth = 2
+        spriteNode.addChild(body)
+
+        // Belt with pouches
+        let belt = SKShapeNode(rectOf: CGSize(width: size * 0.45, height: size * 0.08), cornerRadius: 2)
+        belt.fillColor = SKColor(red: 0.35, green: 0.25, blue: 0.15, alpha: 1.0)
+        belt.strokeColor = SKColor(red: 0.45, green: 0.35, blue: 0.2, alpha: 1.0)
+        belt.lineWidth = 1
+        belt.position = CGPoint(x: 0, y: -size * 0.15)
+        body.addChild(belt)
+
+        // Hood
+        let hoodPath = CGMutablePath()
+        hoodPath.move(to: CGPoint(x: -size * 0.25, y: 0))
+        hoodPath.addQuadCurve(to: CGPoint(x: 0, y: size * 0.35),
+                              control: CGPoint(x: -size * 0.3, y: size * 0.25))
+        hoodPath.addQuadCurve(to: CGPoint(x: size * 0.25, y: 0),
+                              control: CGPoint(x: size * 0.3, y: size * 0.25))
+        hoodPath.closeSubpath()
+
+        let hood = SKShapeNode(path: hoodPath)
+        hood.fillColor = SKColor(red: 0.2, green: 0.25, blue: 0.2, alpha: 1.0)
+        hood.strokeColor = SKColor(red: 0.15, green: 0.2, blue: 0.15, alpha: 1.0)
+        hood.lineWidth = 2
+        hood.position = CGPoint(x: 0, y: size * 0.1)
+        spriteNode.addChild(hood)
+
+        // Shadowed face
+        let face = SKShapeNode(circleOfRadius: size * 0.12)
+        face.fillColor = SKColor(red: 0.1, green: 0.12, blue: 0.1, alpha: 1.0)
+        face.strokeColor = .clear
+        face.position = CGPoint(x: 0, y: -size * 0.05)
+        hood.addChild(face)
+
+        // Glowing green eyes
+        let leftEye = SKShapeNode(circleOfRadius: size * 0.03)
+        leftEye.fillColor = SKColor(red: 0.3, green: 0.9, blue: 0.4, alpha: 1.0)
+        leftEye.strokeColor = .clear
+        leftEye.glowWidth = 4
+        leftEye.position = CGPoint(x: -size * 0.06, y: -size * 0.03)
+        hood.addChild(leftEye)
+
+        let rightEye = SKShapeNode(circleOfRadius: size * 0.03)
+        rightEye.fillColor = SKColor(red: 0.3, green: 0.9, blue: 0.4, alpha: 1.0)
+        rightEye.strokeColor = .clear
+        rightEye.glowWidth = 4
+        rightEye.position = CGPoint(x: size * 0.06, y: -size * 0.03)
+        hood.addChild(rightEye)
+
+        // Left dagger
+        let leftDagger = SKShapeNode(rectOf: CGSize(width: size * 0.06, height: size * 0.35), cornerRadius: 1)
+        leftDagger.fillColor = SKColor(red: 0.6, green: 0.65, blue: 0.7, alpha: 1.0)
+        leftDagger.strokeColor = SKColor(red: 0.4, green: 0.45, blue: 0.5, alpha: 1.0)
+        leftDagger.lineWidth = 1
+        leftDagger.glowWidth = 3
+        leftDagger.position = CGPoint(x: -size * 0.35, y: size * 0.1)
+        leftDagger.zRotation = .pi / 6
+        spriteNode.addChild(leftDagger)
+
+        // Right dagger
+        let rightDagger = SKShapeNode(rectOf: CGSize(width: size * 0.06, height: size * 0.35), cornerRadius: 1)
+        rightDagger.fillColor = SKColor(red: 0.6, green: 0.65, blue: 0.7, alpha: 1.0)
+        rightDagger.strokeColor = SKColor(red: 0.4, green: 0.45, blue: 0.5, alpha: 1.0)
+        rightDagger.lineWidth = 1
+        rightDagger.glowWidth = 3
+        rightDagger.position = CGPoint(x: size * 0.35, y: size * 0.1)
+        rightDagger.zRotation = -.pi / 6
+        spriteNode.addChild(rightDagger)
+    }
+
+    private func setupMageVisuals(size: CGFloat) {
+        // Mystical mage with staff and robes
+
+        // Flowing robes
+        let robePath = CGMutablePath()
+        robePath.move(to: CGPoint(x: -size * 0.35, y: size * 0.1))
+        robePath.addQuadCurve(to: CGPoint(x: -size * 0.4, y: -size * 0.55),
+                              control: CGPoint(x: -size * 0.45, y: -size * 0.2))
+        robePath.addLine(to: CGPoint(x: size * 0.4, y: -size * 0.55))
+        robePath.addQuadCurve(to: CGPoint(x: size * 0.35, y: size * 0.1),
+                              control: CGPoint(x: size * 0.45, y: -size * 0.2))
+        robePath.closeSubpath()
+        let robe = SKShapeNode(path: robePath)
+        robe.fillColor = SKColor(red: 0.3, green: 0.2, blue: 0.5, alpha: 1.0)
+        robe.strokeColor = SKColor(red: 0.4, green: 0.25, blue: 0.6, alpha: 1.0)
+        robe.lineWidth = 2
+        robe.zPosition = -1
+        spriteNode.addChild(robe)
+
+        // Body
+        let body = SKShapeNode(ellipseOf: CGSize(width: size * 0.5, height: size * 0.55))
+        body.fillColor = SKColor(red: 0.35, green: 0.25, blue: 0.55, alpha: 1.0)
+        body.strokeColor = SKColor(red: 0.5, green: 0.3, blue: 0.7, alpha: 1.0)
+        body.lineWidth = 2
+        body.position = CGPoint(x: 0, y: -size * 0.05)
+        spriteNode.addChild(body)
+
+        // Mystical symbol on chest
+        let symbol = SKShapeNode(circleOfRadius: size * 0.1)
+        symbol.fillColor = SKColor(red: 0.7, green: 0.4, blue: 0.9, alpha: 0.5)
+        symbol.strokeColor = SKColor(red: 0.8, green: 0.5, blue: 1.0, alpha: 1.0)
+        symbol.lineWidth = 2
+        symbol.glowWidth = 5
+        symbol.position = CGPoint(x: 0, y: 0)
+        body.addChild(symbol)
+
+        // Wizard hat
+        let hatPath = CGMutablePath()
+        hatPath.move(to: CGPoint(x: -size * 0.25, y: 0))
+        hatPath.addLine(to: CGPoint(x: 0, y: size * 0.5))
+        hatPath.addLine(to: CGPoint(x: size * 0.25, y: 0))
+        hatPath.closeSubpath()
+
+        let hat = SKShapeNode(path: hatPath)
+        hat.fillColor = SKColor(red: 0.25, green: 0.15, blue: 0.4, alpha: 1.0)
+        hat.strokeColor = SKColor(red: 0.5, green: 0.3, blue: 0.7, alpha: 1.0)
+        hat.lineWidth = 2
+        hat.position = CGPoint(x: 0, y: size * 0.2)
+        spriteNode.addChild(hat)
+
+        // Hat brim
+        let brim = SKShapeNode(ellipseOf: CGSize(width: size * 0.6, height: size * 0.15))
+        brim.fillColor = SKColor(red: 0.25, green: 0.15, blue: 0.4, alpha: 1.0)
+        brim.strokeColor = SKColor(red: 0.5, green: 0.3, blue: 0.7, alpha: 1.0)
+        brim.lineWidth = 2
+        brim.position = CGPoint(x: 0, y: size * 0.15)
+        spriteNode.addChild(brim)
+
+        // Face
+        let face = SKShapeNode(circleOfRadius: size * 0.12)
+        face.fillColor = SKColor(red: 0.9, green: 0.8, blue: 0.7, alpha: 1.0)
+        face.strokeColor = .clear
+        face.position = CGPoint(x: 0, y: size * 0.1)
+        spriteNode.addChild(face)
+
+        // Glowing purple eyes
+        let leftEye = SKShapeNode(circleOfRadius: size * 0.025)
+        leftEye.fillColor = SKColor(red: 0.8, green: 0.4, blue: 1.0, alpha: 1.0)
+        leftEye.strokeColor = .clear
+        leftEye.glowWidth = 5
+        leftEye.position = CGPoint(x: -size * 0.05, y: size * 0.02)
+        face.addChild(leftEye)
+
+        let rightEye = SKShapeNode(circleOfRadius: size * 0.025)
+        rightEye.fillColor = SKColor(red: 0.8, green: 0.4, blue: 1.0, alpha: 1.0)
+        rightEye.strokeColor = .clear
+        rightEye.glowWidth = 5
+        rightEye.position = CGPoint(x: size * 0.05, y: size * 0.02)
+        face.addChild(rightEye)
+
+        // Beard
+        let beard = SKShapeNode(ellipseOf: CGSize(width: size * 0.15, height: size * 0.12))
+        beard.fillColor = SKColor(red: 0.7, green: 0.7, blue: 0.75, alpha: 1.0)
+        beard.strokeColor = .clear
+        beard.position = CGPoint(x: 0, y: -size * 0.08)
+        face.addChild(beard)
+
+        // Magic staff
+        let staffPole = SKShapeNode(rectOf: CGSize(width: size * 0.06, height: size * 0.7))
+        staffPole.fillColor = SKColor(red: 0.4, green: 0.25, blue: 0.15, alpha: 1.0)
+        staffPole.strokeColor = SKColor(red: 0.3, green: 0.2, blue: 0.1, alpha: 1.0)
+        staffPole.lineWidth = 1
+        staffPole.position = CGPoint(x: size * 0.4, y: 0)
+        spriteNode.addChild(staffPole)
+
+        // Staff orb
+        let orb = SKShapeNode(circleOfRadius: size * 0.1)
+        orb.fillColor = SKColor(red: 0.6, green: 0.3, blue: 0.9, alpha: 0.8)
+        orb.strokeColor = SKColor(red: 0.8, green: 0.5, blue: 1.0, alpha: 1.0)
+        orb.lineWidth = 2
+        orb.glowWidth = 8
+        orb.position = CGPoint(x: 0, y: size * 0.4)
+        staffPole.addChild(orb)
+    }
+
+    private func setupBerserkerVisuals(size: CGFloat) {
+        // Fierce berserker with war paint and large axe
+
+        // Fur cloak
+        let furPath = CGMutablePath()
+        furPath.move(to: CGPoint(x: -size * 0.35, y: size * 0.15))
+        furPath.addLine(to: CGPoint(x: -size * 0.45, y: -size * 0.3))
+        furPath.addLine(to: CGPoint(x: size * 0.45, y: -size * 0.3))
+        furPath.addLine(to: CGPoint(x: size * 0.35, y: size * 0.15))
+        furPath.closeSubpath()
+        let fur = SKShapeNode(path: furPath)
+        fur.fillColor = SKColor(red: 0.4, green: 0.3, blue: 0.2, alpha: 1.0)
+        fur.strokeColor = SKColor(red: 0.3, green: 0.2, blue: 0.15, alpha: 1.0)
+        fur.lineWidth = 2
+        fur.zPosition = -1
+        spriteNode.addChild(fur)
+
+        // Muscular body
+        let bodyPath = CGMutablePath()
+        bodyPath.move(to: CGPoint(x: -size * 0.3, y: -size * 0.35))
+        bodyPath.addLine(to: CGPoint(x: -size * 0.35, y: size * 0.05))
+        bodyPath.addLine(to: CGPoint(x: -size * 0.25, y: size * 0.2))
+        bodyPath.addLine(to: CGPoint(x: size * 0.25, y: size * 0.2))
+        bodyPath.addLine(to: CGPoint(x: size * 0.35, y: size * 0.05))
+        bodyPath.addLine(to: CGPoint(x: size * 0.3, y: -size * 0.35))
+        bodyPath.closeSubpath()
+
+        let body = SKShapeNode(path: bodyPath)
+        body.fillColor = SKColor(red: 0.85, green: 0.65, blue: 0.5, alpha: 1.0) // Skin tone
+        body.strokeColor = SKColor(red: 0.7, green: 0.5, blue: 0.35, alpha: 1.0)
+        body.lineWidth = 2
+        spriteNode.addChild(body)
+
+        // Chest scar
+        let scar = SKShapeNode(rectOf: CGSize(width: size * 0.03, height: size * 0.2))
+        scar.fillColor = SKColor(red: 0.7, green: 0.4, blue: 0.4, alpha: 0.6)
+        scar.strokeColor = .clear
+        scar.position = CGPoint(x: size * 0.08, y: 0)
+        scar.zRotation = .pi / 6
+        body.addChild(scar)
+
+        // Leather straps
+        let strap = SKShapeNode(rectOf: CGSize(width: size * 0.08, height: size * 0.5))
+        strap.fillColor = SKColor(red: 0.35, green: 0.2, blue: 0.1, alpha: 1.0)
+        strap.strokeColor = .clear
+        strap.position = CGPoint(x: -size * 0.1, y: 0)
+        strap.zRotation = .pi / 4
+        body.addChild(strap)
+
+        // Fierce face
+        let face = SKShapeNode(circleOfRadius: size * 0.15)
+        face.fillColor = SKColor(red: 0.85, green: 0.65, blue: 0.5, alpha: 1.0)
+        face.strokeColor = .clear
+        face.position = CGPoint(x: 0, y: size * 0.25)
+        spriteNode.addChild(face)
+
+        // War paint stripes
+        let paint1 = SKShapeNode(rectOf: CGSize(width: size * 0.25, height: size * 0.03))
+        paint1.fillColor = SKColor(red: 0.8, green: 0.15, blue: 0.1, alpha: 1.0)
+        paint1.strokeColor = .clear
+        paint1.position = CGPoint(x: 0, y: size * 0.02)
+        face.addChild(paint1)
+
+        let paint2 = SKShapeNode(rectOf: CGSize(width: size * 0.2, height: size * 0.03))
+        paint2.fillColor = SKColor(red: 0.8, green: 0.15, blue: 0.1, alpha: 1.0)
+        paint2.strokeColor = .clear
+        paint2.position = CGPoint(x: 0, y: -size * 0.05)
+        face.addChild(paint2)
+
+        // Angry glowing red eyes
+        let leftEye = SKShapeNode(circleOfRadius: size * 0.03)
+        leftEye.fillColor = SKColor(red: 1.0, green: 0.3, blue: 0.2, alpha: 1.0)
+        leftEye.strokeColor = .clear
+        leftEye.glowWidth = 5
+        leftEye.position = CGPoint(x: -size * 0.06, y: size * 0.04)
+        face.addChild(leftEye)
+
+        let rightEye = SKShapeNode(circleOfRadius: size * 0.03)
+        rightEye.fillColor = SKColor(red: 1.0, green: 0.3, blue: 0.2, alpha: 1.0)
+        rightEye.strokeColor = .clear
+        rightEye.glowWidth = 5
+        rightEye.position = CGPoint(x: size * 0.06, y: size * 0.04)
+        face.addChild(rightEye)
+
+        // Mohawk
+        let mohawkPath = CGMutablePath()
+        mohawkPath.move(to: CGPoint(x: -size * 0.05, y: size * 0.1))
+        mohawkPath.addLine(to: CGPoint(x: 0, y: size * 0.4))
+        mohawkPath.addLine(to: CGPoint(x: size * 0.05, y: size * 0.1))
+        mohawkPath.closeSubpath()
+        let mohawk = SKShapeNode(path: mohawkPath)
+        mohawk.fillColor = SKColor(red: 0.2, green: 0.15, blue: 0.1, alpha: 1.0)
+        mohawk.strokeColor = .clear
+        face.addChild(mohawk)
+
+        // Large battle axe
+        let axeHandle = SKShapeNode(rectOf: CGSize(width: size * 0.08, height: size * 0.6))
+        axeHandle.fillColor = SKColor(red: 0.4, green: 0.25, blue: 0.15, alpha: 1.0)
+        axeHandle.strokeColor = SKColor(red: 0.3, green: 0.2, blue: 0.1, alpha: 1.0)
+        axeHandle.lineWidth = 1
+        axeHandle.position = CGPoint(x: size * 0.4, y: size * 0.05)
+        spriteNode.addChild(axeHandle)
+
+        // Axe blade
+        let axeBladePath = CGMutablePath()
+        axeBladePath.move(to: CGPoint(x: 0, y: size * 0.15))
+        axeBladePath.addQuadCurve(to: CGPoint(x: size * 0.25, y: 0),
+                                   control: CGPoint(x: size * 0.3, y: size * 0.15))
+        axeBladePath.addQuadCurve(to: CGPoint(x: 0, y: -size * 0.15),
+                                   control: CGPoint(x: size * 0.3, y: -size * 0.15))
+        axeBladePath.closeSubpath()
+        let axeBlade = SKShapeNode(path: axeBladePath)
+        axeBlade.fillColor = SKColor(red: 0.6, green: 0.6, blue: 0.65, alpha: 1.0)
+        axeBlade.strokeColor = SKColor(red: 0.4, green: 0.4, blue: 0.45, alpha: 1.0)
+        axeBlade.lineWidth = 2
+        axeBlade.glowWidth = 4
+        axeBlade.position = CGPoint(x: size * 0.05, y: size * 0.25)
+        axeHandle.addChild(axeBlade)
     }
 
     private func setupPhysics() {
@@ -589,16 +965,17 @@ class Player: SKNode {
 
         delegate?.playerDidTakeDamage(amount: reducedDamage)
 
-        // Hit feedback
-        showHitFeedback()
-
-        // Brief invincibility
-        startInvincibility()
-
-        // Check death
+        // Check death FIRST - don't do hit feedback or invincibility if dying
         if stats.currentHealth <= 0 {
             die()
+            return
         }
+
+        // Hit feedback (only if not dead)
+        showHitFeedback()
+
+        // Brief invincibility (only if not dead)
+        startInvincibility()
     }
 
     func heal(_ amount: CGFloat) {
@@ -665,6 +1042,13 @@ class Player: SKNode {
     private func die() {
         isDead = true
         physicsBody?.categoryBitMask = GameConfig.PhysicsCategory.none
+
+        // Cancel any existing actions that might interfere with death
+        removeAction(forKey: "hitFlash")
+        removeAction(forKey: "hitShake")
+        removeAction(forKey: "invincibilityFlash")
+        isInvincible = false
+        alpha = 1.0  // Reset alpha before death animation
 
         // Death animation
         let deathAction = SKAction.sequence([

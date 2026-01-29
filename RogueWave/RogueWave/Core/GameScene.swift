@@ -12,6 +12,9 @@ class GameScene: SKScene {
 
     // MARK: - Properties
 
+    // Character selection (set before presenting scene)
+    var selectedCharacterClass: CharacterClass = .knight
+
     // Game state
     private var gameState: GameState = .menu
     private var lastUpdateTime: TimeInterval = 0
@@ -494,7 +497,7 @@ class GameScene: SKScene {
     }
 
     private func setupPlayer() {
-        player = Player()
+        player = Player(characterClass: selectedCharacterClass)
         player.position = CGPoint(x: 0, y: 0)  // Start at world origin
         player.delegate = self
         gameLayer.addChild(player)

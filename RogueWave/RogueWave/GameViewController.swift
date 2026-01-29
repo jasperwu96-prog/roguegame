@@ -45,11 +45,10 @@ class GameViewController: UIViewController {
         skView.ignoresSiblingOrder = true
         skView.preferredFramesPerSecond = 60
 
-        #if DEBUG
-        skView.showsFPS = true
-        skView.showsNodeCount = true
-        skView.showsDrawCount = true
-        #endif
+        // Debug display disabled for cleaner gameplay
+        skView.showsFPS = false
+        skView.showsNodeCount = false
+        skView.showsDrawCount = false
 
         view.addSubview(skView)
     }

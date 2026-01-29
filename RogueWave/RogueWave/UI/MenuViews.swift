@@ -165,19 +165,21 @@ class AchievementsView: SubMenuView {
         let content = createScrollableContent()
         visibleHeight = size.height - 200  // Visible area for scrolling
 
-        // Create scroll container for achievements
-        let scrollNode = SKNode()
-        scrollNode.name = "scrollContainer"
-        content.addChild(scrollNode)
-        scrollContainer = scrollNode
+        // Progress header (fixed, not scrolling) - add FIRST so it's behind
+        let headerBg = SKShapeNode(rectOf: CGSize(width: 300, height: 70))
+        headerBg.fillColor = SKColor(red: 0.08, green: 0.1, blue: 0.15, alpha: 1.0)
+        headerBg.strokeColor = .clear
+        headerBg.position = CGPoint(x: 0, y: visibleHeight / 2 - 35)
+        headerBg.zPosition = 10  // Above scroll content
+        content.addChild(headerBg)
 
-        // Progress header (fixed, not scrolling)
         let progress = AchievementManager.shared.getProgress()
         let progressLabel = SKLabelNode(fontNamed: UIConfig.fontName)
         progressLabel.text = "\(progress.unlocked) / \(progress.total) Unlocked"
         progressLabel.fontSize = 16
         progressLabel.fontColor = SKColor(red: 0.3, green: 0.7, blue: 1.0, alpha: 1.0)
         progressLabel.position = CGPoint(x: 0, y: visibleHeight / 2 - 20)
+        progressLabel.zPosition = 11
         content.addChild(progressLabel)
 
         // Progress bar
@@ -186,6 +188,7 @@ class AchievementsView: SubMenuView {
         barBg.fillColor = SKColor(white: 0.15, alpha: 1.0)
         barBg.strokeColor = .clear
         barBg.position = CGPoint(x: 0, y: visibleHeight / 2 - 45)
+        barBg.zPosition = 11
         content.addChild(barBg)
 
         let progressRatio = progress.total > 0 ? CGFloat(progress.unlocked) / CGFloat(progress.total) : 0
@@ -194,14 +197,33 @@ class AchievementsView: SubMenuView {
         barFill.fillColor = SKColor(red: 0.3, green: 0.7, blue: 0.3, alpha: 1.0)
         barFill.strokeColor = .clear
         barFill.position = CGPoint(x: (fillWidth - barWidth) / 2, y: visibleHeight / 2 - 45)
+        barFill.zPosition = 12
         content.addChild(barFill)
+
+        // Create a crop node to clip the scrolling content
+        let scrollClipHeight = visibleHeight - 90  // Leave room for header
+        let cropNode = SKCropNode()
+        cropNode.position = CGPoint(x: 0, y: -25)  // Offset down from header
+        content.addChild(cropNode)
+
+        // Mask shape for cropping
+        let maskNode = SKShapeNode(rectOf: CGSize(width: 300, height: scrollClipHeight))
+        maskNode.fillColor = .white
+        maskNode.strokeColor = .clear
+        cropNode.maskNode = maskNode
+
+        // Create scroll container for achievements inside the crop node
+        let scrollNode = SKNode()
+        scrollNode.name = "scrollContainer"
+        cropNode.addChild(scrollNode)
+        scrollContainer = scrollNode
 
         // Display achievements in scrollable list
         let achievements = AchievementManager.shared.getAllAchievements()
         let itemWidth: CGFloat = 280
         let itemHeight: CGFloat = 70
         let spacing: CGFloat = 12
-        let startY: CGFloat = visibleHeight / 2 - 80  // Start below progress bar
+        let startY: CGFloat = scrollClipHeight / 2 - 40  // Start near top of scroll area
 
         var visibleIndex = 0
         for achievement in achievements {
@@ -222,12 +244,13 @@ class AchievementsView: SubMenuView {
         contentHeight = CGFloat(visibleIndex) * (itemHeight + spacing)
 
         // Add scroll hint if content is scrollable
-        if contentHeight > visibleHeight - 80 {
+        if contentHeight > scrollClipHeight {
             let hint = SKLabelNode(fontNamed: UIConfig.fontName)
             hint.text = "↕ Swipe to scroll"
             hint.fontSize = 11
             hint.fontColor = SKColor(white: 0.4, alpha: 1.0)
             hint.position = CGPoint(x: 0, y: -visibleHeight / 2 + 10)
+            hint.zPosition = 10
             content.addChild(hint)
         }
     }
@@ -604,20 +627,26 @@ class CharacterSelectView: SubMenuView {
         if isSelected { bg.glowWidth = 5 }
         card.addChild(bg)
 
-        // Character icon placeholder
-        let icon = SKShapeNode(circleOfRadius: 30)
-        icon.fillColor = isUnlocked ? charClass.color : SKColor(white: 0.2, alpha: 1.0)
-        icon.strokeColor = isUnlocked ? charClass.color.withAlphaComponent(0.8) : SKColor(white: 0.3, alpha: 1.0)
-        icon.lineWidth = 2
-        icon.position = CGPoint(x: 0, y: height / 2 - 50)
-        card.addChild(icon)
+        // Character portrait
+        let iconContainer = SKNode()
+        iconContainer.position = CGPoint(x: 0, y: height / 2 - 50)
+        card.addChild(iconContainer)
 
-        if !isUnlocked {
+        if isUnlocked {
+            createCharacterPortrait(for: charClass, in: iconContainer, scale: 0.7)
+        } else {
+            // Locked character - show silhouette with lock
+            let silhouette = SKShapeNode(circleOfRadius: 30)
+            silhouette.fillColor = SKColor(white: 0.15, alpha: 1.0)
+            silhouette.strokeColor = SKColor(white: 0.25, alpha: 1.0)
+            silhouette.lineWidth = 2
+            iconContainer.addChild(silhouette)
+
             let lock = SKLabelNode(fontNamed: UIConfig.fontName)
             lock.text = "🔒"
             lock.fontSize = 24
             lock.verticalAlignmentMode = .center
-            icon.addChild(lock)
+            silhouette.addChild(lock)
         }
 
         // Name
@@ -663,6 +692,168 @@ class CharacterSelectView: SubMenuView {
         }
 
         return card
+    }
+
+    private func createCharacterPortrait(for charClass: CharacterClass, in container: SKNode, scale: CGFloat) {
+        let s: CGFloat = 40 * scale  // Base size
+
+        switch charClass {
+        case .knight:
+            // Knight helmet
+            let helmet = SKShapeNode(circleOfRadius: s * 0.8)
+            helmet.fillColor = SKColor(red: 0.75, green: 0.75, blue: 0.8, alpha: 1.0)
+            helmet.strokeColor = SKColor(red: 0.5, green: 0.5, blue: 0.55, alpha: 1.0)
+            helmet.lineWidth = 2
+            container.addChild(helmet)
+
+            // Visor
+            let visor = SKShapeNode(rectOf: CGSize(width: s * 0.8, height: s * 0.15))
+            visor.fillColor = SKColor(red: 0.1, green: 0.15, blue: 0.25, alpha: 1.0)
+            visor.strokeColor = .clear
+            visor.position = CGPoint(x: 0, y: s * 0.1)
+            helmet.addChild(visor)
+
+            // Plume
+            let plume = SKShapeNode(rectOf: CGSize(width: s * 0.15, height: s * 0.5))
+            plume.fillColor = SKColor(red: 0.85, green: 0.2, blue: 0.2, alpha: 1.0)
+            plume.strokeColor = .clear
+            plume.position = CGPoint(x: 0, y: s * 0.6)
+            helmet.addChild(plume)
+
+            // Glowing eyes
+            for xOffset in [-s * 0.2, s * 0.2] {
+                let eye = SKShapeNode(circleOfRadius: s * 0.08)
+                eye.fillColor = SKColor(red: 0.3, green: 0.7, blue: 1.0, alpha: 1.0)
+                eye.strokeColor = .clear
+                eye.glowWidth = 3
+                eye.position = CGPoint(x: xOffset, y: s * 0.1)
+                helmet.addChild(eye)
+            }
+
+        case .rogue:
+            // Hood
+            let hood = SKShapeNode(circleOfRadius: s * 0.8)
+            hood.fillColor = SKColor(red: 0.2, green: 0.25, blue: 0.2, alpha: 1.0)
+            hood.strokeColor = SKColor(red: 0.15, green: 0.2, blue: 0.15, alpha: 1.0)
+            hood.lineWidth = 2
+            container.addChild(hood)
+
+            // Hood point
+            let pointPath = CGMutablePath()
+            pointPath.move(to: CGPoint(x: -s * 0.3, y: s * 0.4))
+            pointPath.addLine(to: CGPoint(x: 0, y: s * 0.9))
+            pointPath.addLine(to: CGPoint(x: s * 0.3, y: s * 0.4))
+            pointPath.closeSubpath()
+            let point = SKShapeNode(path: pointPath)
+            point.fillColor = SKColor(red: 0.2, green: 0.25, blue: 0.2, alpha: 1.0)
+            point.strokeColor = .clear
+            hood.addChild(point)
+
+            // Shadowed face
+            let face = SKShapeNode(circleOfRadius: s * 0.4)
+            face.fillColor = SKColor(red: 0.1, green: 0.12, blue: 0.1, alpha: 1.0)
+            face.strokeColor = .clear
+            face.position = CGPoint(x: 0, y: -s * 0.1)
+            hood.addChild(face)
+
+            // Green glowing eyes
+            for xOffset in [-s * 0.15, s * 0.15] {
+                let eye = SKShapeNode(circleOfRadius: s * 0.08)
+                eye.fillColor = SKColor(red: 0.3, green: 0.9, blue: 0.4, alpha: 1.0)
+                eye.strokeColor = .clear
+                eye.glowWidth = 4
+                eye.position = CGPoint(x: xOffset, y: -s * 0.05)
+                hood.addChild(eye)
+            }
+
+        case .mage:
+            // Face
+            let face = SKShapeNode(circleOfRadius: s * 0.5)
+            face.fillColor = SKColor(red: 0.9, green: 0.8, blue: 0.7, alpha: 1.0)
+            face.strokeColor = .clear
+            face.position = CGPoint(x: 0, y: -s * 0.15)
+            container.addChild(face)
+
+            // Beard
+            let beard = SKShapeNode(ellipseOf: CGSize(width: s * 0.5, height: s * 0.4))
+            beard.fillColor = SKColor(red: 0.7, green: 0.7, blue: 0.75, alpha: 1.0)
+            beard.strokeColor = .clear
+            beard.position = CGPoint(x: 0, y: -s * 0.5)
+            face.addChild(beard)
+
+            // Wizard hat
+            let hatPath = CGMutablePath()
+            hatPath.move(to: CGPoint(x: -s * 0.6, y: 0))
+            hatPath.addLine(to: CGPoint(x: 0, y: s * 1.2))
+            hatPath.addLine(to: CGPoint(x: s * 0.6, y: 0))
+            hatPath.closeSubpath()
+            let hat = SKShapeNode(path: hatPath)
+            hat.fillColor = SKColor(red: 0.3, green: 0.2, blue: 0.5, alpha: 1.0)
+            hat.strokeColor = SKColor(red: 0.5, green: 0.3, blue: 0.7, alpha: 1.0)
+            hat.lineWidth = 2
+            hat.position = CGPoint(x: 0, y: s * 0.3)
+            container.addChild(hat)
+
+            // Hat brim
+            let brim = SKShapeNode(ellipseOf: CGSize(width: s * 1.4, height: s * 0.3))
+            brim.fillColor = SKColor(red: 0.3, green: 0.2, blue: 0.5, alpha: 1.0)
+            brim.strokeColor = SKColor(red: 0.5, green: 0.3, blue: 0.7, alpha: 1.0)
+            brim.lineWidth = 2
+            brim.position = CGPoint(x: 0, y: s * 0.25)
+            container.addChild(brim)
+
+            // Purple glowing eyes
+            for xOffset in [-s * 0.15, s * 0.15] {
+                let eye = SKShapeNode(circleOfRadius: s * 0.07)
+                eye.fillColor = SKColor(red: 0.8, green: 0.4, blue: 1.0, alpha: 1.0)
+                eye.strokeColor = .clear
+                eye.glowWidth = 4
+                eye.position = CGPoint(x: xOffset, y: -s * 0.1)
+                face.addChild(eye)
+            }
+
+        case .berserker:
+            // Face
+            let face = SKShapeNode(circleOfRadius: s * 0.7)
+            face.fillColor = SKColor(red: 0.85, green: 0.65, blue: 0.5, alpha: 1.0)
+            face.strokeColor = SKColor(red: 0.7, green: 0.5, blue: 0.35, alpha: 1.0)
+            face.lineWidth = 2
+            container.addChild(face)
+
+            // War paint
+            let paint = SKShapeNode(rectOf: CGSize(width: s * 1.0, height: s * 0.1))
+            paint.fillColor = SKColor(red: 0.8, green: 0.15, blue: 0.1, alpha: 1.0)
+            paint.strokeColor = .clear
+            paint.position = CGPoint(x: 0, y: s * 0.05)
+            face.addChild(paint)
+
+            let paint2 = SKShapeNode(rectOf: CGSize(width: s * 0.8, height: s * 0.08))
+            paint2.fillColor = SKColor(red: 0.8, green: 0.15, blue: 0.1, alpha: 1.0)
+            paint2.strokeColor = .clear
+            paint2.position = CGPoint(x: 0, y: -s * 0.15)
+            face.addChild(paint2)
+
+            // Mohawk
+            let mohawkPath = CGMutablePath()
+            mohawkPath.move(to: CGPoint(x: -s * 0.15, y: s * 0.5))
+            mohawkPath.addLine(to: CGPoint(x: 0, y: s * 1.1))
+            mohawkPath.addLine(to: CGPoint(x: s * 0.15, y: s * 0.5))
+            mohawkPath.closeSubpath()
+            let mohawk = SKShapeNode(path: mohawkPath)
+            mohawk.fillColor = SKColor(red: 0.2, green: 0.15, blue: 0.1, alpha: 1.0)
+            mohawk.strokeColor = .clear
+            face.addChild(mohawk)
+
+            // Angry red eyes
+            for xOffset in [-s * 0.2, s * 0.2] {
+                let eye = SKShapeNode(circleOfRadius: s * 0.1)
+                eye.fillColor = SKColor(red: 1.0, green: 0.3, blue: 0.2, alpha: 1.0)
+                eye.strokeColor = .clear
+                eye.glowWidth = 5
+                eye.position = CGPoint(x: xOffset, y: s * 0.1)
+                face.addChild(eye)
+            }
+        }
     }
 }
 

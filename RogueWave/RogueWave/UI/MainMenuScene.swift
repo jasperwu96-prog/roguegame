@@ -335,7 +335,7 @@ class MainMenuScene: SKScene {
         let transition = SKTransition.fade(withDuration: 0.5)
         let gameScene = GameScene(size: size)
         gameScene.scaleMode = .aspectFill
-        // Pass selected character to game scene
+        gameScene.selectedCharacterClass = selectedCharacterClass
         view?.presentScene(gameScene, transition: transition)
     }
 

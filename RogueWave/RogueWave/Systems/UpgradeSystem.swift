@@ -82,12 +82,14 @@ struct UpgradePoolConfig {
         .dash
     ]
 
-    // Unlocked at wave 5
+    // Unlocked at wave 5 - Advanced abilities unlock here!
     static let wave5Upgrades: [UpgradeType] = [
         .critDamage,
         .armor,
         .lifeSteal,
-        .multishot
+        .multishot,
+        .timeSlow,    // NEW: Slow all enemies
+        .teleport     // NEW: Blink ability
     ]
 
     // Unlocked at wave 7
@@ -95,7 +97,9 @@ struct UpgradePoolConfig {
         .aoeBlast,
         .shield,
         .piercing,
-        .homing
+        .homing,
+        .reflect,     // NEW: Reflect projectiles
+        .vortex       // NEW: Pull enemies and explode
     ]
 }
 
@@ -338,6 +342,11 @@ struct UpgradeCardData {
         case .multishot: return "arrow.triangle.branch"
         case .piercing: return "arrow.right.arrow.left"
         case .homing: return "target"
+        // Advanced abilities (wave 5+)
+        case .timeSlow: return "clock.fill"
+        case .teleport: return "sparkles"
+        case .reflect: return "arrow.uturn.left"
+        case .vortex: return "tornado"
         }
     }
 

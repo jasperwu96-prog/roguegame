@@ -43,11 +43,11 @@ enum GameConfig {
 // MARK: - Player Configuration
 
 enum PlayerConfig {
-    // Base stats - BUFFED for exciting gameplay!
-    static let baseHealth: CGFloat = 200  // More survivability
-    static let baseSpeed: CGFloat = 280  // Faster movement
+    // Base stats - Skill-based gameplay!
+    static let baseHealth: CGFloat = 100  // Lower HP - dodge to survive!
+    static let baseSpeed: CGFloat = 300  // Faster movement for dodging
     static let baseDamage: CGFloat = 25  // Hits harder
-    static let baseAttackSpeed: CGFloat = 3.0  // 3 attacks per second - rapid fire!
+    static let baseAttackSpeed: CGFloat = 3.0  // 3 attacks per second
     static let baseAttackRange: CGFloat = 600  // Long range
     static let baseProjectileSpeed: CGFloat = 700  // Fast projectiles
     static let baseCritChance: CGFloat = 0.15  // More crits
@@ -57,7 +57,7 @@ enum PlayerConfig {
     static let size: CGFloat = 40
     static let color: SKColor = SKColor(red: 0.3, green: 0.7, blue: 1.0, alpha: 1.0)
     static let hitFlashDuration: TimeInterval = 0.1
-    static let invincibilityDuration: TimeInterval = 0.8  // Longer invincibility
+    static let invincibilityDuration: TimeInterval = 0.5  // Short invincibility - dodge instead!
 
     // Experience - faster leveling for more upgrades
     static let baseXPToLevel: Int = 50
@@ -77,44 +77,55 @@ enum EnemyConfig {
     static let damageScalingPerWave: CGFloat = 1.1
     static let speedScalingPerWave: CGFloat = 1.02
 
-    // Enemy type configurations - fast enemies, good XP
+    // Enemy type configurations - skill-based with dodgeable projectiles
     enum Chaser {
-        static let baseHealth: CGFloat = 15  // Easier to kill
-        static let baseSpeed: CGFloat = 200  // Fast chasers
+        static let baseHealth: CGFloat = 15
+        static let baseSpeed: CGFloat = 180  // Slightly slower
         static let baseDamage: CGFloat = 8
         static let size: CGFloat = 30
         static let color: SKColor = SKColor(red: 0.9, green: 0.3, blue: 0.3, alpha: 1.0)
-        static let xpValue: Int = 15  // More XP
+        static let xpValue: Int = 15
+        // Goblins throw daggers!
+        static let canShoot: Bool = true
+        static let projectileSpeed: CGFloat = 120  // Slow - dodgeable!
+        static let attackRange: CGFloat = 250
+        static let attackCooldown: TimeInterval = 2.5
     }
 
     enum Swarm {
         static let baseHealth: CGFloat = 8  // Very fragile
-        static let baseSpeed: CGFloat = 250  // Very fast swarm
-        static let baseDamage: CGFloat = 4
+        static let baseSpeed: CGFloat = 250  // Fast swarm - melee only
+        static let baseDamage: CGFloat = 5
         static let size: CGFloat = 20
         static let color: SKColor = SKColor(red: 0.9, green: 0.6, blue: 0.2, alpha: 1.0)
-        static let xpValue: Int = 8  // More XP
+        static let xpValue: Int = 8
+        static let canShoot: Bool = false  // Bats just swarm
     }
 
     enum Ranged {
         static let baseHealth: CGFloat = 12
-        static let baseSpeed: CGFloat = 120
-        static let baseDamage: CGFloat = 12
+        static let baseSpeed: CGFloat = 100  // Slower - keeps distance
+        static let baseDamage: CGFloat = 15  // Hurts more
         static let size: CGFloat = 28
         static let color: SKColor = SKColor(red: 0.6, green: 0.3, blue: 0.9, alpha: 1.0)
-        static let attackRange: CGFloat = 350
-        static let projectileSpeed: CGFloat = 350
-        static let attackCooldown: TimeInterval = 1.5
-        static let xpValue: Int = 20  // More XP
+        static let attackRange: CGFloat = 400
+        static let projectileSpeed: CGFloat = 150  // Slow arrows - dodge them!
+        static let attackCooldown: TimeInterval = 1.2  // Faster shooting
+        static let xpValue: Int = 20
     }
 
     enum Tank {
-        static let baseHealth: CGFloat = 60  // Slightly easier
-        static let baseSpeed: CGFloat = 100
-        static let baseDamage: CGFloat = 20
+        static let baseHealth: CGFloat = 80
+        static let baseSpeed: CGFloat = 80  // Slow
+        static let baseDamage: CGFloat = 25
         static let size: CGFloat = 50
         static let color: SKColor = SKColor(red: 0.4, green: 0.4, blue: 0.5, alpha: 1.0)
-        static let xpValue: Int = 40  // More XP
+        static let xpValue: Int = 40
+        // Orcs throw boulders!
+        static let canShoot: Bool = true
+        static let projectileSpeed: CGFloat = 100  // Very slow - easy to dodge
+        static let attackRange: CGFloat = 300
+        static let attackCooldown: TimeInterval = 3.0  // Slow but deadly
     }
 
     enum Elite {
@@ -180,6 +191,11 @@ enum UpgradeConfig {
         static let aoe: TimeInterval = 8.0
         static let shield: TimeInterval = 15.0
         static let multishot: TimeInterval = 0  // passive
+        // Advanced abilities (wave 5+)
+        static let timeSlow: TimeInterval = 12.0
+        static let teleport: TimeInterval = 5.0
+        static let reflect: TimeInterval = 10.0
+        static let vortex: TimeInterval = 15.0
     }
 }
 
@@ -249,7 +265,7 @@ enum UpgradeType: String, CaseIterable, Codable {
     case armor
     case lifeSteal
 
-    // Active abilities
+    // Active abilities (early game)
     case dash
     case aoeBlast
     case shield
@@ -257,9 +273,24 @@ enum UpgradeType: String, CaseIterable, Codable {
     case piercing
     case homing
 
+    // Advanced abilities (unlocked after wave 5)
+    case timeSlow       // Slow all enemies for 3 seconds
+    case teleport       // Instant teleport with i-frames
+    case reflect        // Reflect enemy projectiles back
+    case vortex         // Pull enemies in then explode
+
     var isActive: Bool {
         switch self {
-        case .dash, .aoeBlast, .shield:
+        case .dash, .aoeBlast, .shield, .timeSlow, .teleport, .reflect, .vortex:
+            return true
+        default:
+            return false
+        }
+    }
+
+    var isAdvanced: Bool {
+        switch self {
+        case .timeSlow, .teleport, .reflect, .vortex:
             return true
         default:
             return false
@@ -284,6 +315,10 @@ enum UpgradeType: String, CaseIterable, Codable {
         case .multishot: return "Multishot"
         case .piercing: return "Piercing"
         case .homing: return "Homing"
+        case .timeSlow: return "Time Slow"
+        case .teleport: return "Teleport"
+        case .reflect: return "Reflect"
+        case .vortex: return "Vortex"
         }
     }
 
@@ -305,6 +340,10 @@ enum UpgradeType: String, CaseIterable, Codable {
         case .multishot: return "+1 Projectile"
         case .piercing: return "Projectiles pierce"
         case .homing: return "Seeking projectiles"
+        case .timeSlow: return "Slow time for 3s"
+        case .teleport: return "Blink to safety"
+        case .reflect: return "Reflect projectiles"
+        case .vortex: return "Pull & explode"
         }
     }
 
@@ -320,6 +359,10 @@ enum UpgradeType: String, CaseIterable, Codable {
         case .lifeSteal: return SKColor(red: 0.7, green: 0.2, blue: 0.4, alpha: 1.0)
         case .dash, .aoeBlast, .shield: return SKColor(red: 0.3, green: 0.8, blue: 1.0, alpha: 1.0)
         case .multishot, .piercing, .homing: return SKColor(red: 0.9, green: 0.7, blue: 0.2, alpha: 1.0)
+        case .timeSlow: return SKColor(red: 0.6, green: 0.3, blue: 0.9, alpha: 1.0)  // Purple
+        case .teleport: return SKColor(red: 0.2, green: 0.9, blue: 0.9, alpha: 1.0)  // Cyan
+        case .reflect: return SKColor(red: 1.0, green: 0.8, blue: 0.2, alpha: 1.0)   // Gold
+        case .vortex: return SKColor(red: 0.9, green: 0.2, blue: 0.5, alpha: 1.0)    // Magenta
         }
     }
 }

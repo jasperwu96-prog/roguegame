@@ -19,10 +19,10 @@ struct PlayerStats {
     var projectileSpeed: CGFloat = PlayerConfig.baseProjectileSpeed
     var critChance: CGFloat = PlayerConfig.baseCritChance
     var critMultiplier: CGFloat = PlayerConfig.baseCritMultiplier
-    var armor: CGFloat = 5  // Start with some armor
-    var lifeSteal: CGFloat = 0.02  // Start with small life steal
-    var projectileCount: Int = 3  // Start with triple shot!
-    var hasPiercing: Bool = true  // Projectiles pierce through enemies!
+    var armor: CGFloat = 0  // No starting armor - skill based!
+    var lifeSteal: CGFloat = 0  // No life steal - dodge to survive!
+    var projectileCount: Int = 3  // Start with triple shot
+    var hasPiercing: Bool = true  // Projectiles pierce through enemies
     var hasHoming: Bool = false
 
     // Experience
@@ -40,10 +40,10 @@ struct PlayerStats {
         projectileSpeed = PlayerConfig.baseProjectileSpeed
         critChance = PlayerConfig.baseCritChance
         critMultiplier = PlayerConfig.baseCritMultiplier
-        armor = 5  // Start with some armor
-        lifeSteal = 0.02  // Start with small life steal
-        projectileCount = 3  // Start with triple shot!
-        hasPiercing = true  // Projectiles pierce through enemies!
+        armor = 0  // No starting armor - skill based!
+        lifeSteal = 0  // No life steal - dodge to survive!
+        projectileCount = 3  // Start with triple shot
+        hasPiercing = true  // Projectiles pierce through enemies
         hasHoming = false
         level = 1
         currentXP = 0
@@ -54,25 +54,52 @@ struct PlayerStats {
 // MARK: - Player Abilities
 
 struct PlayerAbilities {
+    // Basic abilities
     var hasDash: Bool = false
     var hasAOE: Bool = false
     var hasShield: Bool = false
 
+    // Advanced abilities (wave 5+)
+    var hasTimeSlow: Bool = false
+    var hasTeleport: Bool = false
+    var hasReflect: Bool = false
+    var hasVortex: Bool = false
+
+    // Cooldowns
     var dashCooldownRemaining: TimeInterval = 0
     var aoeCooldownRemaining: TimeInterval = 0
     var shieldCooldownRemaining: TimeInterval = 0
+    var timeSlowCooldownRemaining: TimeInterval = 0
+    var teleportCooldownRemaining: TimeInterval = 0
+    var reflectCooldownRemaining: TimeInterval = 0
+    var vortexCooldownRemaining: TimeInterval = 0
 
+    // Active states
     var isShieldActive: Bool = false
     var shieldDuration: TimeInterval = 3.0
+    var isTimeSlowActive: Bool = false
+    var timeSlowDuration: TimeInterval = 3.0
+    var isReflectActive: Bool = false
+    var reflectDuration: TimeInterval = 2.0
 
     mutating func reset() {
         hasDash = false
         hasAOE = false
         hasShield = false
+        hasTimeSlow = false
+        hasTeleport = false
+        hasReflect = false
+        hasVortex = false
         dashCooldownRemaining = 0
         aoeCooldownRemaining = 0
         shieldCooldownRemaining = 0
+        timeSlowCooldownRemaining = 0
+        teleportCooldownRemaining = 0
+        reflectCooldownRemaining = 0
+        vortexCooldownRemaining = 0
         isShieldActive = false
+        isTimeSlowActive = false
+        isReflectActive = false
     }
 }
 
@@ -352,9 +379,15 @@ class Player: SKNode {
         // Auto-attack nearest enemy
         autoAttack(deltaTime: deltaTime, enemies: enemies)
 
-        // Update shield
+        // Update ability states
         if abilities.isShieldActive {
             updateShield(deltaTime: deltaTime)
+        }
+        if abilities.isTimeSlowActive {
+            updateTimeSlow(deltaTime: deltaTime)
+        }
+        if abilities.isReflectActive {
+            updateReflect(deltaTime: deltaTime)
         }
     }
 
@@ -367,6 +400,18 @@ class Player: SKNode {
         }
         if abilities.shieldCooldownRemaining > 0 {
             abilities.shieldCooldownRemaining -= deltaTime
+        }
+        if abilities.timeSlowCooldownRemaining > 0 {
+            abilities.timeSlowCooldownRemaining -= deltaTime
+        }
+        if abilities.teleportCooldownRemaining > 0 {
+            abilities.teleportCooldownRemaining -= deltaTime
+        }
+        if abilities.reflectCooldownRemaining > 0 {
+            abilities.reflectCooldownRemaining -= deltaTime
+        }
+        if abilities.vortexCooldownRemaining > 0 {
+            abilities.vortexCooldownRemaining -= deltaTime
         }
     }
 
@@ -753,6 +798,196 @@ class Player: SKNode {
         shieldNode = nil
     }
 
+    // MARK: - Advanced Abilities (Wave 5+)
+
+    func activateTimeSlow() {
+        guard abilities.hasTimeSlow && abilities.timeSlowCooldownRemaining <= 0 else { return }
+
+        abilities.timeSlowCooldownRemaining = UpgradeConfig.AbilityCooldowns.timeSlow
+        abilities.isTimeSlowActive = true
+        abilities.timeSlowDuration = 3.0
+
+        // Purple time distortion visual
+        let timeField = SKShapeNode(circleOfRadius: 300)
+        timeField.fillColor = SKColor(red: 0.5, green: 0.2, blue: 0.8, alpha: 0.15)
+        timeField.strokeColor = SKColor(red: 0.6, green: 0.3, blue: 0.9, alpha: 0.6)
+        timeField.lineWidth = 3
+        timeField.glowWidth = 10
+        timeField.name = "timeField"
+        addChild(timeField)
+
+        // Pulsing effect
+        let pulse = SKAction.repeatForever(SKAction.sequence([
+            SKAction.scale(to: 1.1, duration: 0.5),
+            SKAction.scale(to: 1.0, duration: 0.5)
+        ]))
+        timeField.run(pulse)
+
+        delegate?.playerDidUseAbility(.timeSlow)
+    }
+
+    private func updateTimeSlow(deltaTime: TimeInterval) {
+        abilities.timeSlowDuration -= deltaTime
+
+        if abilities.timeSlowDuration <= 0 {
+            deactivateTimeSlow()
+        }
+    }
+
+    private func deactivateTimeSlow() {
+        abilities.isTimeSlowActive = false
+        abilities.timeSlowDuration = 3.0
+
+        if let timeField = childNode(withName: "timeField") {
+            timeField.run(SKAction.sequence([
+                SKAction.fadeOut(withDuration: 0.3),
+                SKAction.removeFromParent()
+            ]))
+        }
+    }
+
+    func activateTeleport(direction: CGVector) {
+        guard abilities.hasTeleport && abilities.teleportCooldownRemaining <= 0 else { return }
+
+        abilities.teleportCooldownRemaining = UpgradeConfig.AbilityCooldowns.teleport
+
+        // Teleport distance
+        let teleportDistance: CGFloat = 200
+        var teleportDirection = direction
+
+        // If no direction, teleport in facing direction
+        if teleportDirection == .zero {
+            let angle = spriteNode.zRotation + .pi / 2
+            teleportDirection = CGVector(dx: cos(angle), dy: sin(angle))
+        }
+
+        // Normalize
+        let length = sqrt(teleportDirection.dx * teleportDirection.dx + teleportDirection.dy * teleportDirection.dy)
+        guard length > 0 else { return }
+
+        let targetX = position.x + (teleportDirection.dx / length) * teleportDistance
+        let targetY = position.y + (teleportDirection.dy / length) * teleportDistance
+
+        // Vanish effect at start position
+        let vanishEffect = SKShapeNode(circleOfRadius: PlayerConfig.size)
+        vanishEffect.fillColor = SKColor(red: 0.2, green: 0.9, blue: 0.9, alpha: 0.5)
+        vanishEffect.strokeColor = .clear
+        vanishEffect.position = position
+        vanishEffect.zPosition = GameConfig.ZPosition.effects
+        parent?.addChild(vanishEffect)
+
+        vanishEffect.run(SKAction.sequence([
+            SKAction.group([
+                SKAction.scale(to: 2.0, duration: 0.2),
+                SKAction.fadeOut(withDuration: 0.2)
+            ]),
+            SKAction.removeFromParent()
+        ]))
+
+        // Instant teleport with brief invincibility
+        isInvincible = true
+        position = CGPoint(x: targetX, y: targetY)
+
+        // Appear effect at new position
+        let appearEffect = SKShapeNode(circleOfRadius: PlayerConfig.size * 2)
+        appearEffect.fillColor = SKColor(red: 0.2, green: 0.9, blue: 0.9, alpha: 0.5)
+        appearEffect.strokeColor = .clear
+        appearEffect.position = position
+        appearEffect.zPosition = GameConfig.ZPosition.effects
+        parent?.addChild(appearEffect)
+
+        appearEffect.run(SKAction.sequence([
+            SKAction.group([
+                SKAction.scale(to: 0.1, duration: 0.2),
+                SKAction.fadeOut(withDuration: 0.2)
+            ]),
+            SKAction.run { [weak self] in
+                self?.isInvincible = false
+            },
+            SKAction.removeFromParent()
+        ]))
+
+        delegate?.playerDidUseAbility(.teleport)
+    }
+
+    func activateReflect() {
+        guard abilities.hasReflect && abilities.reflectCooldownRemaining <= 0 else { return }
+
+        abilities.reflectCooldownRemaining = UpgradeConfig.AbilityCooldowns.reflect
+        abilities.isReflectActive = true
+        abilities.reflectDuration = 2.0
+
+        // Golden reflective barrier
+        let reflectShield = SKShapeNode(circleOfRadius: PlayerConfig.size + 15)
+        reflectShield.fillColor = SKColor(red: 1.0, green: 0.85, blue: 0.2, alpha: 0.2)
+        reflectShield.strokeColor = SKColor(red: 1.0, green: 0.8, blue: 0.2, alpha: 0.9)
+        reflectShield.lineWidth = 4
+        reflectShield.glowWidth = 8
+        reflectShield.name = "reflectShield"
+        addChild(reflectShield)
+
+        // Spinning effect
+        let spin = SKAction.repeatForever(SKAction.rotate(byAngle: .pi * 2, duration: 1.0))
+        reflectShield.run(spin)
+
+        delegate?.playerDidUseAbility(.reflect)
+    }
+
+    private func updateReflect(deltaTime: TimeInterval) {
+        abilities.reflectDuration -= deltaTime
+
+        if abilities.reflectDuration <= 0 {
+            deactivateReflect()
+        }
+    }
+
+    private func deactivateReflect() {
+        abilities.isReflectActive = false
+        abilities.reflectDuration = 2.0
+
+        if let reflectShield = childNode(withName: "reflectShield") {
+            reflectShield.run(SKAction.sequence([
+                SKAction.fadeOut(withDuration: 0.2),
+                SKAction.removeFromParent()
+            ]))
+        }
+    }
+
+    func activateVortex() {
+        guard abilities.hasVortex && abilities.vortexCooldownRemaining <= 0 else { return }
+
+        abilities.vortexCooldownRemaining = UpgradeConfig.AbilityCooldowns.vortex
+
+        // Create vortex visual
+        let vortex = SKShapeNode(circleOfRadius: 20)
+        vortex.fillColor = SKColor(red: 0.9, green: 0.2, blue: 0.5, alpha: 0.6)
+        vortex.strokeColor = SKColor(red: 1.0, green: 0.3, blue: 0.6, alpha: 0.9)
+        vortex.lineWidth = 3
+        vortex.glowWidth = 10
+        vortex.position = .zero
+        vortex.name = "vortex"
+        addChild(vortex)
+
+        // Expand with spinning
+        let expandAndSpin = SKAction.group([
+            SKAction.scale(to: 8, duration: 1.0),
+            SKAction.rotate(byAngle: .pi * 4, duration: 1.0)
+        ])
+
+        // Then explode
+        let explode = SKAction.sequence([
+            SKAction.group([
+                SKAction.scale(to: 12, duration: 0.2),
+                SKAction.fadeOut(withDuration: 0.2)
+            ]),
+            SKAction.removeFromParent()
+        ])
+
+        vortex.run(SKAction.sequence([expandAndSpin, explode]))
+
+        delegate?.playerDidUseAbility(.vortex)
+    }
+
     // MARK: - Upgrades
 
     func applyUpgrade(_ upgrade: Upgrade) {
@@ -806,6 +1041,19 @@ class Player: SKNode {
 
         case .homing:
             stats.hasHoming = true
+
+        // Advanced abilities (wave 5+)
+        case .timeSlow:
+            abilities.hasTimeSlow = true
+
+        case .teleport:
+            abilities.hasTeleport = true
+
+        case .reflect:
+            abilities.hasReflect = true
+
+        case .vortex:
+            abilities.hasVortex = true
         }
     }
 

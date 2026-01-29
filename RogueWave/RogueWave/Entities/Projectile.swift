@@ -271,6 +271,24 @@ class Projectile: SKNode {
         run(impactAction)
     }
 
+    // MARK: - Reflect (for Reflect ability)
+
+    func reflect() {
+        // Reverse direction
+        direction = CGPoint(x: -direction.x, y: -direction.y)
+
+        // Increase damage when reflected
+        damage *= 1.5
+
+        // Mark as player projectile now
+        isPlayerProjectile = true
+
+        // Visual change - make it glow gold
+        spriteNode.fillColor = SKColor(red: 1.0, green: 0.85, blue: 0.2, alpha: 1.0)
+        spriteNode.strokeColor = SKColor(red: 1.0, green: 0.7, blue: 0.1, alpha: 1.0)
+        spriteNode.glowWidth = 8
+    }
+
     // MARK: - Bounds Checking
 
     func isOutOfBounds(bounds: CGRect) -> Bool {

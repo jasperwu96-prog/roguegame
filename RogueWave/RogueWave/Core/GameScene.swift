@@ -633,11 +633,35 @@ class GameScene: SKScene {
                 remaining: player.abilities.shieldCooldownRemaining,
                 total: UpgradeConfig.AbilityCooldowns.shield)
         }
+        // Advanced abilities
+        if player.abilities.hasTimeSlow {
+            uiManager.updateAbilityCooldown(.timeSlow,
+                remaining: player.abilities.timeSlowCooldownRemaining,
+                total: UpgradeConfig.AbilityCooldowns.timeSlow)
+        }
+        if player.abilities.hasTeleport {
+            uiManager.updateAbilityCooldown(.teleport,
+                remaining: player.abilities.teleportCooldownRemaining,
+                total: UpgradeConfig.AbilityCooldowns.teleport)
+        }
+        if player.abilities.hasReflect {
+            uiManager.updateAbilityCooldown(.reflect,
+                remaining: player.abilities.reflectCooldownRemaining,
+                total: UpgradeConfig.AbilityCooldowns.reflect)
+        }
+        if player.abilities.hasVortex {
+            uiManager.updateAbilityCooldown(.vortex,
+                remaining: player.abilities.vortexCooldownRemaining,
+                total: UpgradeConfig.AbilityCooldowns.vortex)
+        }
     }
 
     private func updateEnemies(deltaTime: TimeInterval) {
+        // Apply time slow effect if active
+        let effectiveDeltaTime = player.abilities.isTimeSlowActive ? deltaTime * 0.3 : deltaTime
+
         for enemy in enemies {
-            enemy.update(deltaTime: deltaTime)
+            enemy.update(deltaTime: effectiveDeltaTime)
         }
 
         // Remove dead enemies
@@ -821,8 +845,33 @@ extension GameScene: SKPhysicsContactDelegate {
         guard let projectile = projectileNode as? Projectile,
               projectile.isActive else { return }
 
+        // If reflect is active, reflect the projectile back!
+        if player.abilities.isReflectActive {
+            reflectProjectile(projectile)
+            return
+        }
+
         player.takeDamage(projectile.damage)
         projectile.deactivate()
+    }
+
+    private func reflectProjectile(_ projectile: Projectile) {
+        // Reverse projectile direction and make it a player projectile
+        projectile.reflect()
+
+        // Change physics category to player projectile
+        projectile.physicsBody?.categoryBitMask = GameConfig.PhysicsCategory.playerProjectile
+        projectile.physicsBody?.contactTestBitMask = GameConfig.PhysicsCategory.enemy
+
+        // Visual feedback - golden flash
+        let flashAction = SKAction.sequence([
+            SKAction.colorize(with: .yellow, colorBlendFactor: 1.0, duration: 0.1),
+            SKAction.colorize(withColorBlendFactor: 0.0, duration: 0.2)
+        ])
+        projectile.run(flashAction)
+
+        // Move from enemy projectiles to player projectiles array
+        // (Already in projectiles array, just changed category)
     }
 }
 
@@ -1054,9 +1103,61 @@ extension GameScene: UIManagerDelegate {
             activateAOE()
         case .shield:
             player.activateShield()
+        case .timeSlow:
+            player.activateTimeSlow()
+        case .teleport:
+            player.activateTeleport(direction: joystick.currentDirection)
+        case .reflect:
+            player.activateReflect()
+        case .vortex:
+            activateVortex()
         default:
             break
         }
+    }
+
+    // MARK: - Vortex Ability
+
+    private func activateVortex() {
+        player.activateVortex()
+
+        // Pull all enemies toward player then deal damage
+        let vortexRadius: CGFloat = 200
+        let pullDuration: TimeInterval = 1.0
+        let damage = player.stats.damage * 3
+
+        for enemy in enemies {
+            let dx = enemy.position.x - player.position.x
+            let dy = enemy.position.y - player.position.y
+            let distance = sqrt(dx * dx + dy * dy)
+
+            if distance <= vortexRadius {
+                // Pull enemy toward player
+                let pullAction = SKAction.move(to: player.position, duration: pullDuration)
+                pullAction.timingMode = .easeIn
+                enemy.run(pullAction, withKey: "vortexPull")
+            }
+        }
+
+        // Deal damage after pull completes
+        run(SKAction.sequence([
+            SKAction.wait(forDuration: pullDuration + 0.1),
+            SKAction.run { [weak self] in
+                guard let self = self else { return }
+                for enemy in self.enemies {
+                    let dx = enemy.position.x - self.player.position.x
+                    let dy = enemy.position.y - self.player.position.y
+                    let distance = sqrt(dx * dx + dy * dy)
+
+                    if distance <= 50 {  // Close to player after pull
+                        enemy.takeDamage(damage)
+                        GameManager.shared.recordDamageDealt(Int(damage))
+                    }
+                }
+            }
+        ]))
+
+        GameManager.shared.recordAbilityUsed()
     }
 }
 

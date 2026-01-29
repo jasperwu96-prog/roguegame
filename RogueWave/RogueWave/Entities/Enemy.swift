@@ -79,6 +79,11 @@ class Enemy: SKNode {
             baseXP = EnemyConfig.Chaser.xpValue
             size = EnemyConfig.Chaser.size
             color = EnemyConfig.Chaser.color
+            // Goblins throw daggers!
+            self.canShoot = EnemyConfig.Chaser.canShoot
+            self.projectileSpeed = EnemyConfig.Chaser.projectileSpeed
+            self.attackRange = EnemyConfig.Chaser.attackRange
+            self.attackCooldown = EnemyConfig.Chaser.attackCooldown
 
         case .swarm:
             baseHealth = EnemyConfig.Swarm.baseHealth
@@ -87,6 +92,7 @@ class Enemy: SKNode {
             baseXP = EnemyConfig.Swarm.xpValue
             size = EnemyConfig.Swarm.size
             color = EnemyConfig.Swarm.color
+            self.canShoot = EnemyConfig.Swarm.canShoot
 
         case .ranged:
             baseHealth = EnemyConfig.Ranged.baseHealth
@@ -107,6 +113,11 @@ class Enemy: SKNode {
             baseXP = EnemyConfig.Tank.xpValue
             size = EnemyConfig.Tank.size
             color = EnemyConfig.Tank.color
+            // Orcs throw boulders!
+            self.canShoot = EnemyConfig.Tank.canShoot
+            self.projectileSpeed = EnemyConfig.Tank.projectileSpeed
+            self.attackRange = EnemyConfig.Tank.attackRange
+            self.attackCooldown = EnemyConfig.Tank.attackCooldown
 
         case .elite, .boss:
             // Elite and boss are modifiers applied to other types
@@ -575,11 +586,10 @@ class Enemy: SKNode {
             currentHealth = min(currentHealth + regenRate * CGFloat(deltaTime), maxHealth)
         }
 
-        // Movement and attack behavior based on type
-        switch enemyType {
-        case .ranged:
+        // Movement and attack behavior - enemies that can shoot use ranged behavior
+        if canShoot {
             updateRangedBehavior(deltaTime: deltaTime, target: target)
-        default:
+        } else {
             updateChaserBehavior(target: target)
         }
 
@@ -598,23 +608,36 @@ class Enemy: SKNode {
 
     private func updateRangedBehavior(deltaTime: TimeInterval, target: Player) {
         let distanceToTarget = distanceTo(target)
+        let direction = directionTo(target)
 
-        if distanceToTarget > attackRange {
-            // Move closer
-            let direction = directionTo(target)
-            physicsBody?.velocity = CGVector(dx: direction.x * moveSpeed, dy: direction.y * moveSpeed)
-        } else {
-            // Stop and shoot
-            physicsBody?.velocity = .zero
+        // Pure ranged (skeleton archers) - keep distance and shoot
+        // Hybrid shooters (goblins, orcs) - chase and shoot
+        let isPureRanged = enemyType == .ranged
 
-            if lastAttackTime >= attackCooldown {
-                shoot(at: target)
-                lastAttackTime = 0
+        if isPureRanged {
+            // Skeleton archers try to maintain distance
+            if distanceToTarget > attackRange {
+                // Move closer
+                physicsBody?.velocity = CGVector(dx: direction.x * moveSpeed, dy: direction.y * moveSpeed)
+            } else if distanceToTarget < attackRange * 0.5 {
+                // Too close - back away slowly
+                physicsBody?.velocity = CGVector(dx: -direction.x * moveSpeed * 0.5, dy: -direction.y * moveSpeed * 0.5)
+            } else {
+                // In good range - stop and shoot
+                physicsBody?.velocity = .zero
             }
+        } else {
+            // Goblins and Orcs - chase while shooting
+            physicsBody?.velocity = CGVector(dx: direction.x * moveSpeed, dy: direction.y * moveSpeed)
+        }
+
+        // Shoot if in range and cooldown is ready
+        if distanceToTarget <= attackRange && lastAttackTime >= attackCooldown {
+            shoot(at: target)
+            lastAttackTime = 0
         }
 
         // Rotate to face player
-        let direction = directionTo(target)
         let angle = atan2(direction.y, direction.x) - .pi / 2
         spriteNode.zRotation = angle
     }

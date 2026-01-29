@@ -60,17 +60,18 @@ class UIManager {
     // MARK: - Setup
 
     private func setupLayers() {
-        guard let scene = scene else { return }
+        guard let scene = scene,
+              let camera = scene.camera else { return }
 
-        // HUD layer (always visible during gameplay)
+        // HUD layer (always visible during gameplay) - attached to camera
         hudLayer = SKNode()
         hudLayer.zPosition = GameConfig.ZPosition.ui
-        scene.addChild(hudLayer)
+        camera.addChild(hudLayer)
 
-        // Overlay layer (for screens that pause gameplay)
+        // Overlay layer (for screens that pause gameplay) - attached to camera
         overlayLayer = SKNode()
         overlayLayer.zPosition = GameConfig.ZPosition.overlay
-        scene.addChild(overlayLayer)
+        camera.addChild(overlayLayer)
     }
 
     private func setupHUD() {
@@ -82,40 +83,59 @@ class UIManager {
         // Using 100 to ensure nothing is covered
         let safeAreaTop: CGFloat = 100
 
+        // Camera-centered coordinates: (0,0) is center of screen
+        // Top-left: (-screenWidth/2, screenHeight/2)
+        // Top-right: (screenWidth/2, screenHeight/2)
+
         // Health bar (top left, moved further down)
         healthBar = HealthBar(width: UIConfig.healthBarWidth, height: UIConfig.healthBarHeight)
-        healthBar.position = CGPoint(x: 20 + UIConfig.healthBarWidth / 2, y: screenHeight - safeAreaTop - 10)
+        healthBar.position = CGPoint(
+            x: -screenWidth / 2 + 20 + UIConfig.healthBarWidth / 2,
+            y: screenHeight / 2 - safeAreaTop - 10
+        )
         hudLayer.addChild(healthBar)
 
         // XP bar (below health bar)
         xpBar = XPBar(width: UIConfig.xpBarWidth, height: UIConfig.xpBarHeight)
-        xpBar.position = CGPoint(x: 20 + UIConfig.xpBarWidth / 2, y: screenHeight - safeAreaTop - 40)
+        xpBar.position = CGPoint(
+            x: -screenWidth / 2 + 20 + UIConfig.xpBarWidth / 2,
+            y: screenHeight / 2 - safeAreaTop - 40
+        )
         hudLayer.addChild(xpBar)
 
         // Level label (next to XP bar)
         levelLabel = createLabel(text: "Lv.1", fontSize: UIConfig.smallFontSize)
-        levelLabel.position = CGPoint(x: 20 + UIConfig.xpBarWidth + 30, y: screenHeight - safeAreaTop - 40)
+        levelLabel.position = CGPoint(
+            x: -screenWidth / 2 + 20 + UIConfig.xpBarWidth + 30,
+            y: screenHeight / 2 - safeAreaTop - 40
+        )
         hudLayer.addChild(levelLabel)
 
         // Wave label (top center, below Dynamic Island)
         waveLabel = createLabel(text: "Wave 1", fontSize: UIConfig.titleFontSize)
-        waveLabel.position = CGPoint(x: screenWidth / 2, y: screenHeight - safeAreaTop - 10)
+        waveLabel.position = CGPoint(x: 0, y: screenHeight / 2 - safeAreaTop - 10)
         hudLayer.addChild(waveLabel)
 
         // Timer label (below wave)
         timerLabel = createLabel(text: "0:30", fontSize: UIConfig.bodyFontSize)
-        timerLabel.position = CGPoint(x: screenWidth / 2, y: screenHeight - safeAreaTop - 45)
+        timerLabel.position = CGPoint(x: 0, y: screenHeight / 2 - safeAreaTop - 45)
         hudLayer.addChild(timerLabel)
 
         // Kill count (top right)
         killCountLabel = createLabel(text: "Kills: 0", fontSize: UIConfig.bodyFontSize)
         killCountLabel.horizontalAlignmentMode = .right
-        killCountLabel.position = CGPoint(x: screenWidth - 20, y: screenHeight - safeAreaTop - 10)
+        killCountLabel.position = CGPoint(
+            x: screenWidth / 2 - 20,
+            y: screenHeight / 2 - safeAreaTop - 10
+        )
         hudLayer.addChild(killCountLabel)
 
         // Pause button (top right corner)
         let pauseButton = createButton(text: "II", size: CGSize(width: 44, height: 44))
-        pauseButton.position = CGPoint(x: screenWidth - 40, y: screenHeight - safeAreaTop - 55)
+        pauseButton.position = CGPoint(
+            x: screenWidth / 2 - 40,
+            y: screenHeight / 2 - safeAreaTop - 55
+        )
         pauseButton.name = "pauseButton"
         hudLayer.addChild(pauseButton)
     }
@@ -190,8 +210,9 @@ class UIManager {
 
         let button = AbilityButton(abilityType: type)
         let buttonIndex = abilityButtons.count
-        let xPos = scene.size.width - 60
-        let yPos: CGFloat = 150 + CGFloat(buttonIndex) * 70
+        // Camera-centered coordinates
+        let xPos = scene.size.width / 2 - 60
+        let yPos: CGFloat = -scene.size.height / 2 + 150 + CGFloat(buttonIndex) * 70
 
         button.position = CGPoint(x: xPos, y: yPos)
         button.delegate = self
@@ -556,11 +577,11 @@ class UpgradeSelectionScreen: SKNode {
     }
 
     private func setup(size: CGSize) {
-        // Dim background
+        // Dim background (camera-centered: 0,0 is center)
         let background = SKShapeNode(rectOf: size)
         background.fillColor = SKColor.black.withAlphaComponent(0.8)
         background.strokeColor = .clear
-        background.position = CGPoint(x: size.width / 2, y: size.height / 2)
+        background.position = CGPoint(x: 0, y: 0)
         addChild(background)
 
         // Title
@@ -568,7 +589,7 @@ class UpgradeSelectionScreen: SKNode {
         title.text = "Choose an Upgrade"
         title.fontSize = UIConfig.titleFontSize
         title.fontColor = .white
-        title.position = CGPoint(x: size.width / 2, y: size.height - 100)
+        title.position = CGPoint(x: 0, y: size.height / 2 - 100)
         addChild(title)
 
         // Create upgrade cards
@@ -576,13 +597,13 @@ class UpgradeSelectionScreen: SKNode {
         let cardHeight: CGFloat = 150
         let cardSpacing: CGFloat = 20
         let totalWidth = CGFloat(choices.count) * cardWidth + CGFloat(choices.count - 1) * cardSpacing
-        let startX = (size.width - totalWidth) / 2 + cardWidth / 2
+        let startX = -totalWidth / 2 + cardWidth / 2
 
         for (index, upgrade) in choices.enumerated() {
             let card = UpgradeCard(upgrade: upgrade, size: CGSize(width: cardWidth, height: cardHeight))
             card.position = CGPoint(
                 x: startX + CGFloat(index) * (cardWidth + cardSpacing),
-                y: size.height / 2
+                y: 0
             )
             card.name = "card_\(index)"
             addChild(card)
@@ -700,11 +721,11 @@ class DeathScreen: SKNode {
     }
 
     private func setup(size: CGSize, stats: GameStats) {
-        // Background
+        // Background (camera-centered: 0,0 is center)
         let background = SKShapeNode(rectOf: size)
         background.fillColor = SKColor.black.withAlphaComponent(0.9)
         background.strokeColor = .clear
-        background.position = CGPoint(x: size.width / 2, y: size.height / 2)
+        background.position = CGPoint(x: 0, y: 0)
         addChild(background)
 
         // Game Over title
@@ -712,11 +733,11 @@ class DeathScreen: SKNode {
         title.text = "GAME OVER"
         title.fontSize = 40
         title.fontColor = SKColor.red
-        title.position = CGPoint(x: size.width / 2, y: size.height - 120)
+        title.position = CGPoint(x: 0, y: size.height / 2 - 120)
         addChild(title)
 
         // Stats
-        let statsY = size.height / 2 + 50
+        let statsY: CGFloat = 50
         let statsSpacing: CGFloat = 30
 
         let statsTexts = [
@@ -731,19 +752,19 @@ class DeathScreen: SKNode {
             label.text = text
             label.fontSize = UIConfig.bodyFontSize
             label.fontColor = .white
-            label.position = CGPoint(x: size.width / 2, y: statsY - CGFloat(index) * statsSpacing)
+            label.position = CGPoint(x: 0, y: statsY - CGFloat(index) * statsSpacing)
             addChild(label)
         }
 
         // Restart button
         restartButton = createButton(text: "Play Again", width: 180, height: 50)
-        restartButton.position = CGPoint(x: size.width / 2, y: 180)
+        restartButton.position = CGPoint(x: 0, y: -size.height / 2 + 180)
         restartButton.name = "restartButton"
         addChild(restartButton)
 
         // Menu button
         menuButton = createButton(text: "Main Menu", width: 180, height: 50)
-        menuButton.position = CGPoint(x: size.width / 2, y: 110)
+        menuButton.position = CGPoint(x: 0, y: -size.height / 2 + 110)
         menuButton.name = "menuButton"
         addChild(menuButton)
     }
@@ -803,11 +824,11 @@ class PauseScreen: SKNode {
     }
 
     private func setup(size: CGSize) {
-        // Background
+        // Background (camera-centered: 0,0 is center)
         let background = SKShapeNode(rectOf: size)
         background.fillColor = SKColor.black.withAlphaComponent(0.8)
         background.strokeColor = .clear
-        background.position = CGPoint(x: size.width / 2, y: size.height / 2)
+        background.position = CGPoint(x: 0, y: 0)
         addChild(background)
 
         // Title
@@ -815,18 +836,18 @@ class PauseScreen: SKNode {
         title.text = "PAUSED"
         title.fontSize = UIConfig.titleFontSize
         title.fontColor = .white
-        title.position = CGPoint(x: size.width / 2, y: size.height / 2 + 80)
+        title.position = CGPoint(x: 0, y: 80)
         addChild(title)
 
         // Resume button
         resumeButton = createButton(text: "Resume", width: 160, height: 50)
-        resumeButton.position = CGPoint(x: size.width / 2, y: size.height / 2)
+        resumeButton.position = CGPoint(x: 0, y: 0)
         resumeButton.name = "resumeButton"
         addChild(resumeButton)
 
         // Quit button
         quitButton = createButton(text: "Quit", width: 160, height: 50)
-        quitButton.position = CGPoint(x: size.width / 2, y: size.height / 2 - 70)
+        quitButton.position = CGPoint(x: 0, y: -70)
         quitButton.name = "quitButton"
         addChild(quitButton)
     }

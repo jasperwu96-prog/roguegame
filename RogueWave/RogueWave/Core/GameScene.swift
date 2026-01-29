@@ -34,21 +34,41 @@ class GameScene: SKScene {
     // Scene layers
     private var gameLayer: SKNode!
     private var backgroundLayer: SKNode!
+    private var worldNode: SKNode!  // Contains everything that moves with camera
+
+    // Camera system
+    private var gameCamera: SKCameraNode!
+
+    // Infinite world system
+    private var generatedChunks: Set<ChunkCoord> = []
+    private var environmentObjects: [SKNode] = []
+    private let chunkSize: CGFloat = 400
+    private let renderDistance: Int = 2  // Chunks to render around player
 
     // Statistics
     private var killCount: Int = 0
     private var rerollsRemaining: Int = 0
 
+    // Chunk coordinate helper
+    private struct ChunkCoord: Hashable {
+        let x: Int
+        let y: Int
+    }
+
     // MARK: - Scene Lifecycle
 
     override func didMove(to view: SKView) {
         setupScene()
+        setupCamera()
         setupPhysics()
         setupLayers()
         setupPlayer()
         setupJoystick()
         setupSystems()
         setupUI()
+
+        // Generate initial world around player
+        updateInfiniteWorld()
 
         // Start the game
         startGame()
@@ -57,207 +77,337 @@ class GameScene: SKScene {
     // MARK: - Setup Methods
 
     private func setupScene() {
-        backgroundColor = UIConfig.backgroundColor
-        anchorPoint = CGPoint(x: 0, y: 0)
+        backgroundColor = SKColor(red: 0.15, green: 0.22, blue: 0.15, alpha: 1.0)  // Dark forest green
+        anchorPoint = CGPoint(x: 0.5, y: 0.5)  // Center anchor for camera
 
         // Initialize object pools
         ObjectPool.shared.initialize()
     }
 
+    private func setupCamera() {
+        gameCamera = SKCameraNode()
+        camera = gameCamera
+        addChild(gameCamera)
+    }
+
     private func setupPhysics() {
-        // Minimal physics for performance
+        // Minimal physics for performance - no boundaries for infinite world
         physicsWorld.gravity = .zero
         physicsWorld.contactDelegate = self
-
-        // Create arena boundaries
-        let boundaryRect = CGRect(x: 0, y: 0, width: size.width, height: size.height)
-        let boundary = SKPhysicsBody(edgeLoopFrom: boundaryRect)
-        boundary.categoryBitMask = GameConfig.PhysicsCategory.boundary
-        boundary.collisionBitMask = GameConfig.PhysicsCategory.player | GameConfig.PhysicsCategory.enemy
-        boundary.friction = 0
-        physicsBody = boundary
     }
 
     private func setupLayers() {
-        // Background layer
+        // World node - everything that moves with the world
+        worldNode = SKNode()
+        worldNode.zPosition = 0
+        addChild(worldNode)
+
+        // Background layer (grass, ground tiles)
         backgroundLayer = SKNode()
         backgroundLayer.zPosition = GameConfig.ZPosition.background
-        addChild(backgroundLayer)
+        worldNode.addChild(backgroundLayer)
 
-        // Create grid pattern for visual reference
-        createBackgroundGrid()
-
-        // Game layer (contains player, enemies, projectiles)
+        // Game layer (contains player, enemies, projectiles, trees)
         gameLayer = SKNode()
         gameLayer.zPosition = GameConfig.ZPosition.floor
-        addChild(gameLayer)
+        worldNode.addChild(gameLayer)
     }
 
-    private func createBackgroundGrid() {
-        // Create a dungeon/arena style background
+    // MARK: - Infinite World Generation
 
-        // Dark stone floor base
-        let floorBase = SKShapeNode(rectOf: CGSize(width: size.width, height: size.height))
-        floorBase.fillColor = SKColor(red: 0.12, green: 0.1, blue: 0.15, alpha: 1.0)
-        floorBase.strokeColor = .clear
-        floorBase.position = CGPoint(x: size.width / 2, y: size.height / 2)
-        backgroundLayer.addChild(floorBase)
+    private func updateInfiniteWorld() {
+        let playerChunkX = Int(floor(player.position.x / chunkSize))
+        let playerChunkY = Int(floor(player.position.y / chunkSize))
 
-        // Stone tile pattern
-        let tileSize: CGFloat = 60
-        let tileColors = [
-            SKColor(red: 0.15, green: 0.12, blue: 0.18, alpha: 1.0),
-            SKColor(red: 0.13, green: 0.11, blue: 0.16, alpha: 1.0),
-            SKColor(red: 0.14, green: 0.12, blue: 0.17, alpha: 1.0)
-        ]
-
-        var tileX: CGFloat = tileSize / 2
-        var row = 0
-        while tileX < size.width + tileSize {
-            var tileY: CGFloat = tileSize / 2
-            while tileY < size.height + tileSize {
-                let tile = SKShapeNode(rectOf: CGSize(width: tileSize - 2, height: tileSize - 2), cornerRadius: 3)
-                tile.fillColor = tileColors[(row + Int(tileY / tileSize)) % tileColors.count]
-                tile.strokeColor = SKColor(red: 0.08, green: 0.06, blue: 0.1, alpha: 0.8)
-                tile.lineWidth = 1
-                tile.position = CGPoint(x: tileX, y: tileY)
-                backgroundLayer.addChild(tile)
-
-                // Random cracks/details on some tiles
-                if Int.random(in: 0...5) == 0 {
-                    let crack = SKShapeNode(rectOf: CGSize(width: CGFloat.random(in: 10...25), height: 1))
-                    crack.fillColor = SKColor(red: 0.08, green: 0.06, blue: 0.1, alpha: 0.5)
-                    crack.strokeColor = .clear
-                    crack.zRotation = CGFloat.random(in: -.pi/4 ... .pi/4)
-                    crack.position = CGPoint(
-                        x: CGFloat.random(in: -tileSize/4 ... tileSize/4),
-                        y: CGFloat.random(in: -tileSize/4 ... tileSize/4)
-                    )
-                    tile.addChild(crack)
+        // Generate chunks around player
+        for dx in -renderDistance...renderDistance {
+            for dy in -renderDistance...renderDistance {
+                let coord = ChunkCoord(x: playerChunkX + dx, y: playerChunkY + dy)
+                if !generatedChunks.contains(coord) {
+                    generateChunk(at: coord)
+                    generatedChunks.insert(coord)
                 }
-
-                tileY += tileSize
             }
-            tileX += tileSize
-            row += 1
         }
 
-        // Arena border/walls
-        let borderWidth: CGFloat = 15
-        let borderColor = SKColor(red: 0.25, green: 0.2, blue: 0.15, alpha: 1.0)
-        let borderHighlight = SKColor(red: 0.35, green: 0.28, blue: 0.2, alpha: 1.0)
-
-        // Top border
-        let topBorder = SKShapeNode(rectOf: CGSize(width: size.width, height: borderWidth))
-        topBorder.fillColor = borderColor
-        topBorder.strokeColor = borderHighlight
-        topBorder.lineWidth = 2
-        topBorder.position = CGPoint(x: size.width / 2, y: size.height - borderWidth / 2)
-        backgroundLayer.addChild(topBorder)
-
-        // Bottom border
-        let bottomBorder = SKShapeNode(rectOf: CGSize(width: size.width, height: borderWidth))
-        bottomBorder.fillColor = borderColor
-        bottomBorder.strokeColor = borderHighlight
-        bottomBorder.lineWidth = 2
-        bottomBorder.position = CGPoint(x: size.width / 2, y: borderWidth / 2)
-        backgroundLayer.addChild(bottomBorder)
-
-        // Left border
-        let leftBorder = SKShapeNode(rectOf: CGSize(width: borderWidth, height: size.height))
-        leftBorder.fillColor = borderColor
-        leftBorder.strokeColor = borderHighlight
-        leftBorder.lineWidth = 2
-        leftBorder.position = CGPoint(x: borderWidth / 2, y: size.height / 2)
-        backgroundLayer.addChild(leftBorder)
-
-        // Right border
-        let rightBorder = SKShapeNode(rectOf: CGSize(width: borderWidth, height: size.height))
-        rightBorder.fillColor = borderColor
-        rightBorder.strokeColor = borderHighlight
-        rightBorder.lineWidth = 2
-        rightBorder.position = CGPoint(x: size.width - borderWidth / 2, y: size.height / 2)
-        backgroundLayer.addChild(rightBorder)
-
-        // Corner decorations (torch holders)
-        let cornerPositions = [
-            CGPoint(x: 40, y: size.height - 100),
-            CGPoint(x: size.width - 40, y: size.height - 100),
-            CGPoint(x: 40, y: 100),
-            CGPoint(x: size.width - 40, y: 100)
-        ]
-
-        for pos in cornerPositions {
-            // Torch base
-            let torchBase = SKShapeNode(rectOf: CGSize(width: 20, height: 30), cornerRadius: 3)
-            torchBase.fillColor = SKColor(red: 0.3, green: 0.25, blue: 0.15, alpha: 1.0)
-            torchBase.strokeColor = SKColor(red: 0.4, green: 0.35, blue: 0.25, alpha: 1.0)
-            torchBase.lineWidth = 2
-            torchBase.position = pos
-            backgroundLayer.addChild(torchBase)
-
-            // Torch flame glow
-            let glow = SKShapeNode(circleOfRadius: 25)
-            glow.fillColor = SKColor(red: 1.0, green: 0.6, blue: 0.2, alpha: 0.15)
-            glow.strokeColor = .clear
-            glow.position = CGPoint(x: pos.x, y: pos.y + 25)
-            backgroundLayer.addChild(glow)
-
-            // Flame
-            let flamePath = CGMutablePath()
-            flamePath.move(to: CGPoint(x: -8, y: 0))
-            flamePath.addQuadCurve(to: CGPoint(x: 0, y: 25), control: CGPoint(x: -10, y: 15))
-            flamePath.addQuadCurve(to: CGPoint(x: 8, y: 0), control: CGPoint(x: 10, y: 15))
-            flamePath.closeSubpath()
-
-            let flame = SKShapeNode(path: flamePath)
-            flame.fillColor = SKColor(red: 1.0, green: 0.5, blue: 0.1, alpha: 0.9)
-            flame.strokeColor = SKColor(red: 1.0, green: 0.8, blue: 0.3, alpha: 1.0)
-            flame.lineWidth = 1
-            flame.glowWidth = 5
-            flame.position = CGPoint(x: pos.x, y: pos.y + 15)
-            backgroundLayer.addChild(flame)
-
-            // Animate flame flicker
-            let flicker = SKAction.sequence([
-                SKAction.scaleX(to: 1.1, duration: 0.2),
-                SKAction.scaleX(to: 0.9, duration: 0.15),
-                SKAction.scaleX(to: 1.0, duration: 0.1)
-            ])
-            flame.run(SKAction.repeatForever(flicker))
+        // Remove distant chunks (optimization)
+        let chunksToRemove = generatedChunks.filter { coord in
+            abs(coord.x - playerChunkX) > renderDistance + 1 ||
+            abs(coord.y - playerChunkY) > renderDistance + 1
         }
 
-        // Center arena circle decoration
-        let centerCircle = SKShapeNode(circleOfRadius: 80)
-        centerCircle.fillColor = .clear
-        centerCircle.strokeColor = SKColor(red: 0.2, green: 0.18, blue: 0.15, alpha: 0.5)
-        centerCircle.lineWidth = 3
-        centerCircle.position = CGPoint(x: size.width / 2, y: size.height / 2)
-        backgroundLayer.addChild(centerCircle)
+        for coord in chunksToRemove {
+            removeChunk(at: coord)
+            generatedChunks.remove(coord)
+        }
+    }
 
-        let innerCircle = SKShapeNode(circleOfRadius: 60)
-        innerCircle.fillColor = .clear
-        innerCircle.strokeColor = SKColor(red: 0.25, green: 0.2, blue: 0.15, alpha: 0.4)
-        innerCircle.lineWidth = 2
-        innerCircle.position = CGPoint(x: size.width / 2, y: size.height / 2)
-        backgroundLayer.addChild(innerCircle)
+    private func generateChunk(at coord: ChunkCoord) {
+        let chunkOriginX = CGFloat(coord.x) * chunkSize
+        let chunkOriginY = CGFloat(coord.y) * chunkSize
 
-        // Subtle vignette effect (darker corners)
-        let vignetteSize = Swift.max(size.width, size.height) * 1.5
-        let vignette = SKShapeNode(circleOfRadius: vignetteSize / 2)
-        vignette.fillColor = .clear
-        vignette.strokeColor = SKColor(red: 0, green: 0, blue: 0, alpha: 0.4)
-        vignette.lineWidth = vignetteSize * 0.3
-        vignette.position = CGPoint(x: size.width / 2, y: size.height / 2)
-        vignette.zPosition = GameConfig.ZPosition.background + 0.5
-        backgroundLayer.addChild(vignette)
+        // Use seeded random for consistent generation
+        srand48(coord.x * 73856093 ^ coord.y * 19349663)
+
+        // Create ground tiles for this chunk
+        let tileSize: CGFloat = 50
+        let tilesPerChunk = Int(chunkSize / tileSize)
+
+        for tx in 0..<tilesPerChunk {
+            for ty in 0..<tilesPerChunk {
+                let tileX = chunkOriginX + CGFloat(tx) * tileSize + tileSize / 2
+                let tileY = chunkOriginY + CGFloat(ty) * tileSize + tileSize / 2
+
+                let tile = createGroundTile(at: CGPoint(x: tileX, y: tileY), size: tileSize)
+                tile.name = "chunk_\(coord.x)_\(coord.y)"
+                backgroundLayer.addChild(tile)
+            }
+        }
+
+        // Add environmental objects (trees, rocks, bushes)
+        let objectCount = Int(drand48() * 4) + 2  // 2-5 objects per chunk
+
+        for _ in 0..<objectCount {
+            let objX = chunkOriginX + CGFloat(drand48()) * chunkSize
+            let objY = chunkOriginY + CGFloat(drand48()) * chunkSize
+
+            // Don't spawn objects too close to player start
+            let distFromOrigin = sqrt(objX * objX + objY * objY)
+            if distFromOrigin < 100 { continue }
+
+            let objectType = drand48()
+            let obj: SKNode
+
+            if objectType < 0.4 {
+                obj = createTree(at: CGPoint(x: objX, y: objY))
+            } else if objectType < 0.7 {
+                obj = createRock(at: CGPoint(x: objX, y: objY))
+            } else {
+                obj = createBush(at: CGPoint(x: objX, y: objY))
+            }
+
+            obj.name = "chunk_\(coord.x)_\(coord.y)"
+            gameLayer.addChild(obj)
+            environmentObjects.append(obj)
+        }
+    }
+
+    private func removeChunk(at coord: ChunkCoord) {
+        let chunkName = "chunk_\(coord.x)_\(coord.y)"
+
+        // Remove background tiles
+        backgroundLayer.children.filter { $0.name == chunkName }.forEach { $0.removeFromParent() }
+
+        // Remove environment objects
+        environmentObjects.removeAll { obj in
+            if obj.name == chunkName {
+                obj.removeFromParent()
+                return true
+            }
+            return false
+        }
+    }
+
+    private func createGroundTile(at position: CGPoint, size: CGFloat) -> SKNode {
+        let tile = SKShapeNode(rectOf: CGSize(width: size - 1, height: size - 1))
+
+        // Vary grass colors slightly
+        let greenVariation = CGFloat(drand48()) * 0.08
+        let baseGreen: CGFloat = 0.28 + greenVariation
+        tile.fillColor = SKColor(red: 0.18, green: baseGreen, blue: 0.12, alpha: 1.0)
+        tile.strokeColor = SKColor(red: 0.12, green: 0.2, blue: 0.08, alpha: 0.3)
+        tile.lineWidth = 0.5
+        tile.position = position
+
+        // Add grass detail
+        if drand48() < 0.3 {
+            let grassBlade = SKShapeNode(rectOf: CGSize(width: 2, height: CGFloat(drand48()) * 8 + 4))
+            grassBlade.fillColor = SKColor(red: 0.2, green: 0.4, blue: 0.15, alpha: 0.6)
+            grassBlade.strokeColor = .clear
+            grassBlade.position = CGPoint(
+                x: CGFloat(drand48()) * size * 0.6 - size * 0.3,
+                y: CGFloat(drand48()) * size * 0.6 - size * 0.3
+            )
+            grassBlade.zRotation = CGFloat(drand48()) * 0.3 - 0.15
+            tile.addChild(grassBlade)
+        }
+
+        // Add dirt patches occasionally
+        if drand48() < 0.1 {
+            let dirt = SKShapeNode(circleOfRadius: CGFloat(drand48()) * 8 + 4)
+            dirt.fillColor = SKColor(red: 0.25, green: 0.2, blue: 0.12, alpha: 0.5)
+            dirt.strokeColor = .clear
+            dirt.position = CGPoint(
+                x: CGFloat(drand48()) * size * 0.5 - size * 0.25,
+                y: CGFloat(drand48()) * size * 0.5 - size * 0.25
+            )
+            tile.addChild(dirt)
+        }
+
+        return tile
+    }
+
+    private func createTree(at position: CGPoint) -> SKNode {
+        let tree = SKNode()
+        tree.position = position
+        tree.zPosition = GameConfig.ZPosition.enemy - 1  // Behind enemies but above ground
+
+        // Tree trunk
+        let trunkHeight: CGFloat = CGFloat(drand48()) * 20 + 30
+        let trunkWidth: CGFloat = CGFloat(drand48()) * 8 + 12
+        let trunk = SKShapeNode(rectOf: CGSize(width: trunkWidth, height: trunkHeight), cornerRadius: 3)
+        trunk.fillColor = SKColor(red: 0.35, green: 0.25, blue: 0.15, alpha: 1.0)
+        trunk.strokeColor = SKColor(red: 0.25, green: 0.18, blue: 0.1, alpha: 1.0)
+        trunk.lineWidth = 1
+        trunk.position = CGPoint(x: 0, y: trunkHeight / 2)
+        tree.addChild(trunk)
+
+        // Tree foliage (multiple circles for full look)
+        let foliageColor = SKColor(red: 0.15, green: CGFloat(drand48()) * 0.15 + 0.35, blue: 0.12, alpha: 1.0)
+        let foliageSize: CGFloat = CGFloat(drand48()) * 15 + 25
+
+        for i in 0..<3 {
+            let foliage = SKShapeNode(circleOfRadius: foliageSize - CGFloat(i) * 5)
+            foliage.fillColor = foliageColor
+            foliage.strokeColor = SKColor(red: 0.1, green: 0.25, blue: 0.08, alpha: 0.5)
+            foliage.lineWidth = 1
+            foliage.position = CGPoint(
+                x: CGFloat(drand48()) * 10 - 5,
+                y: trunkHeight + foliageSize * 0.5 + CGFloat(i) * 8
+            )
+            tree.addChild(foliage)
+        }
+
+        // Add shadow
+        let shadow = SKShapeNode(ellipseOf: CGSize(width: foliageSize * 1.5, height: foliageSize * 0.5))
+        shadow.fillColor = SKColor(red: 0, green: 0, blue: 0, alpha: 0.2)
+        shadow.strokeColor = .clear
+        shadow.position = CGPoint(x: 5, y: -5)
+        shadow.zPosition = -1
+        tree.addChild(shadow)
+
+        // Add physics for collision (optional - trees as obstacles)
+        let treeBody = SKPhysicsBody(circleOfRadius: trunkWidth / 2)
+        treeBody.isDynamic = false
+        treeBody.categoryBitMask = GameConfig.PhysicsCategory.boundary
+        treeBody.collisionBitMask = GameConfig.PhysicsCategory.player
+        tree.physicsBody = treeBody
+
+        return tree
+    }
+
+    private func createRock(at position: CGPoint) -> SKNode {
+        let rock = SKNode()
+        rock.position = position
+        rock.zPosition = GameConfig.ZPosition.enemy - 2
+
+        let rockSize = CGFloat(drand48()) * 15 + 15
+
+        // Rock shape (irregular)
+        let rockPath = CGMutablePath()
+        let points = Int(drand48() * 3) + 5
+        for i in 0..<points {
+            let angle = (CGFloat(i) / CGFloat(points)) * .pi * 2
+            let radius = rockSize * (0.7 + CGFloat(drand48()) * 0.3)
+            let x = cos(angle) * radius
+            let y = sin(angle) * radius * 0.7  // Flatten slightly
+            if i == 0 {
+                rockPath.move(to: CGPoint(x: x, y: y))
+            } else {
+                rockPath.addLine(to: CGPoint(x: x, y: y))
+            }
+        }
+        rockPath.closeSubpath()
+
+        let rockShape = SKShapeNode(path: rockPath)
+        rockShape.fillColor = SKColor(red: 0.4, green: 0.38, blue: 0.35, alpha: 1.0)
+        rockShape.strokeColor = SKColor(red: 0.3, green: 0.28, blue: 0.25, alpha: 1.0)
+        rockShape.lineWidth = 2
+        rock.addChild(rockShape)
+
+        // Rock highlight
+        let highlight = SKShapeNode(circleOfRadius: rockSize * 0.3)
+        highlight.fillColor = SKColor(red: 0.5, green: 0.48, blue: 0.45, alpha: 0.5)
+        highlight.strokeColor = .clear
+        highlight.position = CGPoint(x: -rockSize * 0.2, y: rockSize * 0.2)
+        rock.addChild(highlight)
+
+        // Shadow
+        let shadow = SKShapeNode(ellipseOf: CGSize(width: rockSize * 2, height: rockSize * 0.8))
+        shadow.fillColor = SKColor(red: 0, green: 0, blue: 0, alpha: 0.15)
+        shadow.strokeColor = .clear
+        shadow.position = CGPoint(x: 3, y: -rockSize * 0.3)
+        shadow.zPosition = -1
+        rock.addChild(shadow)
+
+        // Physics body
+        let rockBody = SKPhysicsBody(circleOfRadius: rockSize * 0.8)
+        rockBody.isDynamic = false
+        rockBody.categoryBitMask = GameConfig.PhysicsCategory.boundary
+        rockBody.collisionBitMask = GameConfig.PhysicsCategory.player
+        rock.physicsBody = rockBody
+
+        return rock
+    }
+
+    private func createBush(at position: CGPoint) -> SKNode {
+        let bush = SKNode()
+        bush.position = position
+        bush.zPosition = GameConfig.ZPosition.enemy - 3
+
+        let bushSize = CGFloat(drand48()) * 10 + 12
+
+        // Multiple overlapping circles for bush
+        for i in 0..<4 {
+            let leaf = SKShapeNode(circleOfRadius: bushSize - CGFloat(i) * 2)
+            leaf.fillColor = SKColor(
+                red: 0.2,
+                green: CGFloat(drand48()) * 0.1 + 0.4,
+                blue: 0.15,
+                alpha: 0.9
+            )
+            leaf.strokeColor = SKColor(red: 0.15, green: 0.3, blue: 0.1, alpha: 0.5)
+            leaf.lineWidth = 1
+            leaf.position = CGPoint(
+                x: CGFloat(drand48()) * bushSize * 0.5 - bushSize * 0.25,
+                y: CGFloat(drand48()) * bushSize * 0.3
+            )
+            bush.addChild(leaf)
+        }
+
+        // Small flowers occasionally
+        if drand48() < 0.3 {
+            let flower = SKShapeNode(circleOfRadius: 3)
+            flower.fillColor = [
+                SKColor.yellow,
+                SKColor.white,
+                SKColor(red: 1.0, green: 0.5, blue: 0.5, alpha: 1.0)
+            ].randomElement()!
+            flower.strokeColor = .clear
+            flower.position = CGPoint(x: CGFloat(drand48()) * 10 - 5, y: bushSize * 0.5)
+            bush.addChild(flower)
+        }
+
+        // Shadow
+        let shadow = SKShapeNode(ellipseOf: CGSize(width: bushSize * 2, height: bushSize * 0.6))
+        shadow.fillColor = SKColor(red: 0, green: 0, blue: 0, alpha: 0.1)
+        shadow.strokeColor = .clear
+        shadow.position = CGPoint(x: 2, y: -bushSize * 0.3)
+        shadow.zPosition = -1
+        bush.addChild(shadow)
+
+        // Bushes don't block movement (no physics body)
+        return bush
     }
 
     private func setupPlayer() {
         player = Player()
-        player.position = CGPoint(x: size.width / 2, y: size.height / 2)
+        player.position = CGPoint(x: 0, y: 0)  // Start at world origin
         player.delegate = self
         gameLayer.addChild(player)
+
+        // Position camera on player
+        gameCamera.position = player.position
 
         // Apply permanent upgrade bonuses
         applyPermanentUpgrades()
@@ -280,24 +430,38 @@ class GameScene: SKScene {
         // Create dynamic joystick (appears where you touch)
         joystick = VirtualJoystick()
         joystick.delegate = self
-        joystick.position = UIConfig.joystickPosition
-        addChild(joystick)
+        // Position relative to camera (bottom-left of screen)
+        joystick.position = CGPoint(x: -size.width / 2 + UIConfig.joystickPosition.x,
+                                     y: -size.height / 2 + UIConfig.joystickPosition.y)
+        gameCamera.addChild(joystick)  // Add to camera so it stays on screen
 
-        // Touch zone covers left half of screen
-        let touchZoneRect = CGRect(x: 0, y: 0, width: size.width / 2, height: size.height)
+        // Touch zone covers left half of screen (relative to camera)
+        let touchZoneRect = CGRect(x: -size.width / 2, y: -size.height / 2,
+                                    width: size.width / 2, height: size.height)
         joystickTouchZone = JoystickTouchZone(rect: touchZoneRect, joystick: joystick)
         joystickTouchZone.zPosition = GameConfig.ZPosition.ui - 1
-        addChild(joystickTouchZone)
+        gameCamera.addChild(joystickTouchZone)  // Add to camera so it stays on screen
     }
 
     private func setupSystems() {
-        // Wave manager
+        // Wave manager - spawn bounds will be updated dynamically around player
         waveManager = WaveManager()
         waveManager.delegate = self
-        waveManager.spawnBounds = CGRect(x: 0, y: 0, width: size.width, height: size.height)
+        updateSpawnBoundsAroundPlayer()
 
         // Upgrade system
         upgradeSystem = UpgradeSystem()
+    }
+
+    private func updateSpawnBoundsAroundPlayer() {
+        // Create spawn bounds centered on player position
+        let spawnRadius: CGFloat = 500
+        waveManager.spawnBounds = CGRect(
+            x: player.position.x - spawnRadius,
+            y: player.position.y - spawnRadius,
+            width: spawnRadius * 2,
+            height: spawnRadius * 2
+        )
     }
 
     private func setupUI() {
@@ -364,10 +528,17 @@ class GameScene: SKScene {
     private func restartGame() {
         // Clean up
         cleanupGameObjects()
+        cleanupWorld()
 
-        // Reset player
-        player.reset(at: CGPoint(x: size.width / 2, y: size.height / 2))
+        // Reset player at origin
+        player.reset(at: CGPoint(x: 0, y: 0))
         applyPermanentUpgrades()
+
+        // Reset camera
+        gameCamera.position = player.position
+
+        // Regenerate world around player
+        updateInfiniteWorld()
 
         // Reset systems
         upgradeSystem.resetForNewRun()
@@ -375,6 +546,16 @@ class GameScene: SKScene {
 
         // Start new game
         startGame()
+    }
+
+    private func cleanupWorld() {
+        // Remove all generated chunks
+        backgroundLayer.removeAllChildren()
+        for obj in environmentObjects {
+            obj.removeFromParent()
+        }
+        environmentObjects.removeAll()
+        generatedChunks.removeAll()
     }
 
     private func cleanupGameObjects() {
@@ -404,12 +585,24 @@ class GameScene: SKScene {
 
         // Update game systems
         updatePlayer(deltaTime: deltaTime)
+        updateCamera()
+        updateInfiniteWorld()
+        updateSpawnBoundsAroundPlayer()
         updateEnemies(deltaTime: deltaTime)
         updateProjectiles(deltaTime: deltaTime)
         updateWaveManager(deltaTime: deltaTime)
 
         // Update statistics
         GameManager.shared.updateSurvivedTime(gameTime)
+    }
+
+    private func updateCamera() {
+        // Smooth camera follow
+        let lerpFactor: CGFloat = 0.1
+        let targetPos = player.position
+
+        gameCamera.position.x += (targetPos.x - gameCamera.position.x) * lerpFactor
+        gameCamera.position.y += (targetPos.y - gameCamera.position.y) * lerpFactor
     }
 
     private func updatePlayer(deltaTime: TimeInterval) {

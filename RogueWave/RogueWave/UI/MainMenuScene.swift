@@ -251,9 +251,11 @@ class MainMenuScene: SKScene {
                 }
             }
 
-            // Start drag tracking for character select
+            // Start drag tracking for scrollable views
             if let charSelect = submenu as? CharacterSelectView {
                 charSelect.handleDragBegan(at: submenuLocation)
+            } else if let achievements = submenu as? AchievementsView {
+                achievements.handleDragBegan(at: submenuLocation)
             }
             return
         }
@@ -274,10 +276,14 @@ class MainMenuScene: SKScene {
             }
         }
 
-        // Handle scrolling in character select view
-        if let charSelect = currentSubMenu as? CharacterSelectView {
-            let submenuLocation = touch.location(in: charSelect)
-            charSelect.handleDragMoved(to: submenuLocation)
+        // Handle scrolling in scrollable views
+        if let submenu = currentSubMenu as? SubMenuView {
+            let submenuLocation = touch.location(in: submenu)
+            if let charSelect = submenu as? CharacterSelectView {
+                charSelect.handleDragMoved(to: submenuLocation)
+            } else if let achievements = submenu as? AchievementsView {
+                achievements.handleDragMoved(to: submenuLocation)
+            }
         }
     }
 
@@ -285,9 +291,11 @@ class MainMenuScene: SKScene {
         guard let touch = touches.first else { return }
         let location = touch.location(in: self)
 
-        // Handle character select drag end
+        // Handle drag end for scrollable views
         if let charSelect = currentSubMenu as? CharacterSelectView {
             charSelect.handleDragEnded()
+        } else if let achievements = currentSubMenu as? AchievementsView {
+            achievements.handleDragEnded()
         }
 
         // Check if this was a tap (not a drag)

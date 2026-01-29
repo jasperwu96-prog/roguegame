@@ -1303,13 +1303,26 @@ class Enemy: SKNode {
         isActive = false
         physicsBody?.categoryBitMask = GameConfig.PhysicsCategory.none
 
-        // Remove specific repeatForever action keys to prevent memory leaks
-        // Don't use removeAllActions() as it breaks the death animation
+        // Remove specific repeatForever action keys on self to prevent memory leaks
+        // Don't use removeAllActions() on self as it breaks the death animation
         removeAction(forKey: "elitePulse")
         removeAction(forKey: "shoot")
         removeAction(forKey: "chargeWarning")
         removeAction(forKey: "suicideFuse")
         removeAction(forKey: "buffPulse")
+        removeAction(forKey: "buffExpire")
+        removeAction(forKey: "chargeAttack")
+
+        // CRITICAL: Remove ALL actions from child nodes to prevent memory leaks
+        // Many repeatForever actions run on children (wings, orbs, particles, etc.)
+        removeAllActionsRecursively(from: spriteNode)
+
+        // Also clean up buff glow and boss particles which are direct children
+        for child in children {
+            if child != spriteNode {
+                removeAllActionsRecursively(from: child)
+            }
+        }
 
         // Death animation - notify delegate, then remove from scene
         let deathAction = SKAction.sequence([
@@ -1327,6 +1340,15 @@ class Enemy: SKNode {
 
         // Spawn death particles
         spawnDeathParticles()
+    }
+
+    /// Recursively removes all actions from a node and its children
+    private func removeAllActionsRecursively(from node: SKNode?) {
+        guard let node = node else { return }
+        node.removeAllActions()
+        for child in node.children {
+            removeAllActionsRecursively(from: child)
+        }
     }
 
     private func spawnDeathParticles() {

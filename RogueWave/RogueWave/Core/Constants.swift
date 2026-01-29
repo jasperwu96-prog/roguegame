@@ -69,8 +69,8 @@ enum PlayerConfig {
 enum EnemyConfig {
     // Spawn settings - Fast action!
     static let spawnPadding: CGFloat = 30  // Distance outside spawn bounds
-    static let maxEnemiesOnScreen: Int = 25  // Reduced to prevent performance issues
-    static let spawnInterval: TimeInterval = 0.3  // Slower spawning for stability
+    static let maxEnemiesOnScreen: Int = 12  // Heavily reduced to prevent crashes
+    static let spawnInterval: TimeInterval = 0.6  // Much slower spawning for stability
 
     // Base scaling per wave
     static let healthScalingPerWave: CGFloat = 1.15
@@ -188,10 +188,10 @@ enum WaveConfig {
     // Wave modifiers
     static let modifierChance: CGFloat = 0.3
 
-    // First 3 waves spawn configuration - ACTION PACKED!
-    static let wave1Enemies: [(EnemyType, Int)] = [(.chaser, 12), (.swarm, 8)]
-    static let wave2Enemies: [(EnemyType, Int)] = [(.chaser, 15), (.swarm, 12), (.ranged, 3)]
-    static let wave3Enemies: [(EnemyType, Int)] = [(.chaser, 12), (.swarm, 15), (.ranged, 5), (.tank, 2)]
+    // First 3 waves spawn configuration - reduced for stability
+    static let wave1Enemies: [(EnemyType, Int)] = [(.chaser, 6), (.swarm, 4)]
+    static let wave2Enemies: [(EnemyType, Int)] = [(.chaser, 6), (.swarm, 5), (.ranged, 2)]
+    static let wave3Enemies: [(EnemyType, Int)] = [(.chaser, 5), (.swarm, 5), (.ranged, 3), (.tank, 2)]
 
     // WAVE 10+ SKILL CHECKS
     static let hardModeWave: Int = 10

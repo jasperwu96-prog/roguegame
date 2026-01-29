@@ -613,7 +613,11 @@ class Player: SKNode {
     }
 
     private func showHitFeedback() {
-        // Flash red
+        // Cancel any existing hit feedback to prevent action accumulation
+        removeAction(forKey: "hitFlash")
+        removeAction(forKey: "hitShake")
+
+        // Flash red - use key to prevent stacking
         let flashAction = SKAction.sequence([
             SKAction.run { [weak self] in
                 self?.spriteNode.fillColor = SKColor.red
@@ -623,32 +627,39 @@ class Player: SKNode {
                 self?.spriteNode.fillColor = PlayerConfig.color
             }
         ])
-        run(flashAction)
+        run(flashAction, withKey: "hitFlash")
 
-        // Shake effect
+        // Shake effect - use key to prevent stacking
         let shakeAction = SKAction.sequence([
             SKAction.moveBy(x: -5, y: 0, duration: 0.02),
             SKAction.moveBy(x: 10, y: 0, duration: 0.02),
             SKAction.moveBy(x: -10, y: 0, duration: 0.02),
             SKAction.moveBy(x: 5, y: 0, duration: 0.02)
         ])
-        run(shakeAction)
+        run(shakeAction, withKey: "hitShake")
     }
 
     private func startInvincibility() {
         isInvincible = true
 
-        // Flashing effect during invincibility
+        // Cancel any existing invincibility flash to prevent stacking
+        removeAction(forKey: "invincibilityFlash")
+
+        // Flashing effect during invincibility - use key to prevent stacking
         let flashSequence = SKAction.sequence([
             SKAction.fadeAlpha(to: 0.5, duration: 0.1),
             SKAction.fadeAlpha(to: 1.0, duration: 0.1)
         ])
         let flashAction = SKAction.repeat(flashSequence, count: Int(PlayerConfig.invincibilityDuration / 0.2))
 
-        run(flashAction) { [weak self] in
-            self?.isInvincible = false
-            self?.alpha = 1.0
-        }
+        let fullAction = SKAction.sequence([
+            flashAction,
+            SKAction.run { [weak self] in
+                self?.isInvincible = false
+                self?.alpha = 1.0
+            }
+        ])
+        run(fullAction, withKey: "invincibilityFlash")
     }
 
     private func die() {

@@ -1143,7 +1143,8 @@ extension GameScene: SKPhysicsContactDelegate {
     }
 
     private func triggerHitFreeze(duration: TimeInterval = 0.03) {
-        // Brief pause for impactful hits
+        // Brief pause for impactful hits - use key to prevent stacking
+        removeAction(forKey: "hitFreeze")
         isPaused = true
         run(SKAction.sequence([
             SKAction.wait(forDuration: duration),
@@ -1151,7 +1152,7 @@ extension GameScene: SKPhysicsContactDelegate {
                 guard self?.gameState == .playing else { return }
                 self?.isPaused = false
             }
-        ]))
+        ]), withKey: "hitFreeze")
     }
 
     private func handleEnemyProjectilePlayerCollision(_ contact: SKPhysicsContact) {

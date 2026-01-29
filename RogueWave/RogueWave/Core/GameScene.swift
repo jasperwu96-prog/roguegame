@@ -598,6 +598,7 @@ class GameScene: SKScene {
 
         gameState = .playing
         isPaused = false
+        hitFreezeActive = false
     }
 
     private func gameOver() {
@@ -985,6 +986,11 @@ class GameScene: SKScene {
 
     private func continueAfterUpgrade() {
         gameState = .playing
+
+        // CRITICAL: Ensure scene is not paused when resuming gameplay
+        // This can happen if triggerHitFreeze was active when transitioning to upgrade screen
+        isPaused = false
+        hitFreezeActive = false
 
         // Force cleanup of any dead enemies still in array
         enemies.removeAll { $0.isDead }

@@ -155,6 +155,10 @@ class ObjectPool {
                 poolSize = 10
             case .elite, .boss:
                 poolSize = 5
+            case .suicide:
+                poolSize = 15
+            case .buffer:
+                poolSize = 8
             }
 
             enemyPools[type] = GenericPool(initialSize: poolSize, maxSize: poolSize * 3) {

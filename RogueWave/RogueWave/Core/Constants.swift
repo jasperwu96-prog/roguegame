@@ -77,82 +77,84 @@ enum EnemyConfig {
     static let damageScalingPerWave: CGFloat = 1.1
     static let speedScalingPerWave: CGFloat = 1.02
 
-    // Enemy type configurations - skill-based with dodgeable projectiles
+    // Enemy type configurations - ZOMBIE THEMED
     enum Chaser {
+        // Zombie Walker - standard undead
         static let baseHealth: CGFloat = 15
-        static let baseSpeed: CGFloat = 180  // Slightly slower
+        static let baseSpeed: CGFloat = 180
         static let baseDamage: CGFloat = 8
         static let size: CGFloat = 30
-        static let color: SKColor = SKColor(red: 0.9, green: 0.3, blue: 0.3, alpha: 1.0)
+        static let color: SKColor = SKColor(red: 0.4, green: 0.5, blue: 0.35, alpha: 1.0)  // Zombie green
         static let xpValue: Int = 15
-        // Goblins throw daggers!
         static let canShoot: Bool = true
-        static let projectileSpeed: CGFloat = 120  // Slow - dodgeable!
+        static let projectileSpeed: CGFloat = 120
         static let attackRange: CGFloat = 250
         static let attackCooldown: TimeInterval = 2.5
     }
 
     enum Swarm {
-        static let baseHealth: CGFloat = 8  // Very fragile
-        static let baseSpeed: CGFloat = 250  // Fast swarm - melee only
+        // Zombie Crawler - fast crawling zombie
+        static let baseHealth: CGFloat = 8
+        static let baseSpeed: CGFloat = 250
         static let baseDamage: CGFloat = 5
         static let size: CGFloat = 20
-        static let color: SKColor = SKColor(red: 0.9, green: 0.6, blue: 0.2, alpha: 1.0)
+        static let color: SKColor = SKColor(red: 0.45, green: 0.42, blue: 0.4, alpha: 1.0)  // Gray flesh
         static let xpValue: Int = 8
-        static let canShoot: Bool = false  // Bats just swarm
+        static let canShoot: Bool = false
     }
 
     enum Ranged {
+        // Zombie Spitter - spits acid
         static let baseHealth: CGFloat = 12
-        static let baseSpeed: CGFloat = 100  // Slower - keeps distance
-        static let baseDamage: CGFloat = 15  // Hurts more
+        static let baseSpeed: CGFloat = 100
+        static let baseDamage: CGFloat = 15
         static let size: CGFloat = 28
-        static let color: SKColor = SKColor(red: 0.6, green: 0.3, blue: 0.9, alpha: 1.0)
+        static let color: SKColor = SKColor(red: 0.5, green: 0.4, blue: 0.55, alpha: 1.0)  // Sickly purple
         static let attackRange: CGFloat = 400
-        static let projectileSpeed: CGFloat = 150  // Slow arrows - dodge them!
-        static let attackCooldown: TimeInterval = 1.2  // Faster shooting
+        static let projectileSpeed: CGFloat = 150
+        static let attackCooldown: TimeInterval = 1.2
         static let xpValue: Int = 20
     }
 
     enum Tank {
+        // Zombie Brute - hulking armored zombie
         static let baseHealth: CGFloat = 80
-        static let baseSpeed: CGFloat = 80  // Slow
+        static let baseSpeed: CGFloat = 80
         static let baseDamage: CGFloat = 25
         static let size: CGFloat = 50
-        static let color: SKColor = SKColor(red: 0.4, green: 0.4, blue: 0.5, alpha: 1.0)
+        static let color: SKColor = SKColor(red: 0.35, green: 0.38, blue: 0.35, alpha: 1.0)  // Dark gray
         static let xpValue: Int = 40
-        // Orcs throw boulders!
         static let canShoot: Bool = true
-        static let projectileSpeed: CGFloat = 100  // Very slow - easy to dodge
+        static let projectileSpeed: CGFloat = 100
         static let attackRange: CGFloat = 300
-        static let attackCooldown: TimeInterval = 3.0  // Slow but deadly
+        static let attackCooldown: TimeInterval = 3.0
     }
 
-    // Suicide enemy - explodes when near player, forces movement
+    // Zombie Bloater - explosive zombie
     enum Suicide {
         static let baseHealth: CGFloat = 20
-        static let baseSpeed: CGFloat = 220  // Fast - rushes player
-        static let baseDamage: CGFloat = 40  // High explosion damage
+        static let baseSpeed: CGFloat = 220
+        static let baseDamage: CGFloat = 40
         static let size: CGFloat = 25
-        static let color: SKColor = SKColor(red: 1.0, green: 0.3, blue: 0.1, alpha: 1.0)  // Orange-red
+        static let color: SKColor = SKColor(red: 0.45, green: 0.55, blue: 0.3, alpha: 1.0)  // Bloated green
         static let xpValue: Int = 25
         static let explosionRadius: CGFloat = 80
-        static let fuseTime: TimeInterval = 1.5  // Time before exploding when in range
-        static let triggerRange: CGFloat = 50  // Range to start fuse
+        static let fuseTime: TimeInterval = 1.5
+        static let triggerRange: CGFloat = 50
     }
 
-    // Buffer enemy - strengthens nearby allies
+    // Zombie Screamer - buffs other zombies
     enum Buffer {
         static let baseHealth: CGFloat = 25
         static let baseSpeed: CGFloat = 100
         static let baseDamage: CGFloat = 5
         static let size: CGFloat = 32
-        static let color: SKColor = SKColor(red: 0.8, green: 0.6, blue: 1.0, alpha: 1.0)  // Purple
+        static let color: SKColor = SKColor(red: 0.4, green: 0.45, blue: 0.6, alpha: 1.0)  // Pale blue
         static let xpValue: Int = 35
         static let buffRadius: CGFloat = 150
         static let buffInterval: TimeInterval = 3.0
-        static let damageBuffPercent: CGFloat = 0.3  // 30% damage boost
-        static let speedBuffPercent: CGFloat = 0.2   // 20% speed boost
+        static let damageBuffPercent: CGFloat = 0.3
+        static let speedBuffPercent: CGFloat = 0.2
     }
 
     enum Elite {

@@ -247,51 +247,324 @@ class Enemy: SKNode {
     }
 
     private func setupSimpleEnemy(size: CGFloat, color: SKColor) {
-        // Simple circle body - much more performant than complex shapes
+        // Zombie-themed visuals for each enemy type
+        switch enemyType {
+        case .chaser:
+            setupZombieWalker(size: size)
+        case .swarm:
+            setupZombieCrawler(size: size)
+        case .ranged:
+            setupZombieSpitter(size: size)
+        case .tank:
+            setupZombieBrute(size: size)
+        case .suicide:
+            setupZombieBloater(size: size)
+        case .buffer:
+            setupZombieScreamer(size: size)
+        }
+    }
+
+    // MARK: - Zombie Visual Types
+
+    private func setupZombieWalker(size: CGFloat) {
+        // Basic zombie - green/gray decaying humanoid
+        let zombieGreen = SKColor(red: 0.4, green: 0.5, blue: 0.35, alpha: 1.0)
+        let zombieDark = SKColor(red: 0.25, green: 0.3, blue: 0.2, alpha: 1.0)
+
+        // Body - slightly irregular shape
         spriteNode = SKShapeNode(circleOfRadius: size / 2)
-        spriteNode.fillColor = color
-        spriteNode.strokeColor = color.withAlphaComponent(0.8)
+        spriteNode.fillColor = zombieGreen
+        spriteNode.strokeColor = zombieDark
         spriteNode.lineWidth = 2
         addChild(spriteNode)
 
-        // Simple eyes (just 2 small dots)
-        let eyeSize = size * 0.08
-        let eyeY = size * 0.1
-        let eyeSpacing = size * 0.15
+        // Tattered head shape
+        let head = SKShapeNode(ellipseOf: CGSize(width: size * 0.7, height: size * 0.6))
+        head.fillColor = zombieGreen
+        head.strokeColor = zombieDark
+        head.lineWidth = 1
+        head.position = CGPoint(x: 0, y: size * 0.15)
+        spriteNode.addChild(head)
 
+        // Hollow eyes (dark sockets)
+        let eyeSize = size * 0.1
         let leftEye = SKShapeNode(circleOfRadius: eyeSize)
-        leftEye.fillColor = .white
+        leftEye.fillColor = SKColor(red: 0.1, green: 0.1, blue: 0.05, alpha: 1.0)
         leftEye.strokeColor = .clear
-        leftEye.position = CGPoint(x: -eyeSpacing, y: eyeY)
-        spriteNode.addChild(leftEye)
+        leftEye.position = CGPoint(x: -size * 0.12, y: size * 0.05)
+        head.addChild(leftEye)
+
+        // Glowing pupil
+        let leftPupil = SKShapeNode(circleOfRadius: eyeSize * 0.4)
+        leftPupil.fillColor = SKColor(red: 0.8, green: 0.9, blue: 0.3, alpha: 1.0)
+        leftPupil.strokeColor = .clear
+        leftPupil.glowWidth = 2
+        leftEye.addChild(leftPupil)
 
         let rightEye = SKShapeNode(circleOfRadius: eyeSize)
-        rightEye.fillColor = .white
+        rightEye.fillColor = SKColor(red: 0.1, green: 0.1, blue: 0.05, alpha: 1.0)
         rightEye.strokeColor = .clear
-        rightEye.position = CGPoint(x: eyeSpacing, y: eyeY)
+        rightEye.position = CGPoint(x: size * 0.12, y: size * 0.05)
+        head.addChild(rightEye)
+
+        let rightPupil = SKShapeNode(circleOfRadius: eyeSize * 0.4)
+        rightPupil.fillColor = SKColor(red: 0.8, green: 0.9, blue: 0.3, alpha: 1.0)
+        rightPupil.strokeColor = .clear
+        rightPupil.glowWidth = 2
+        rightEye.addChild(rightPupil)
+
+        // Gaping mouth
+        let mouth = SKShapeNode(ellipseOf: CGSize(width: size * 0.2, height: size * 0.12))
+        mouth.fillColor = SKColor(red: 0.2, green: 0.1, blue: 0.1, alpha: 1.0)
+        mouth.strokeColor = .clear
+        mouth.position = CGPoint(x: 0, y: -size * 0.1)
+        head.addChild(mouth)
+    }
+
+    private func setupZombieCrawler(size: CGFloat) {
+        // Fast crawling zombie - low to ground, long arms
+        let crawlerGray = SKColor(red: 0.45, green: 0.42, blue: 0.4, alpha: 1.0)
+        let crawlerDark = SKColor(red: 0.3, green: 0.28, blue: 0.25, alpha: 1.0)
+
+        // Elongated body
+        spriteNode = SKShapeNode(ellipseOf: CGSize(width: size * 0.9, height: size * 0.5))
+        spriteNode.fillColor = crawlerGray
+        spriteNode.strokeColor = crawlerDark
+        spriteNode.lineWidth = 1
+        addChild(spriteNode)
+
+        // Small head
+        let head = SKShapeNode(circleOfRadius: size * 0.2)
+        head.fillColor = crawlerGray
+        head.strokeColor = crawlerDark
+        head.lineWidth = 1
+        head.position = CGPoint(x: size * 0.25, y: size * 0.1)
+        spriteNode.addChild(head)
+
+        // Beady glowing eyes
+        for xOff: CGFloat in [-0.06, 0.06] {
+            let eye = SKShapeNode(circleOfRadius: size * 0.04)
+            eye.fillColor = SKColor(red: 1.0, green: 0.8, blue: 0.2, alpha: 1.0)
+            eye.strokeColor = .clear
+            eye.glowWidth = 2
+            eye.position = CGPoint(x: xOff * size, y: size * 0.03)
+            head.addChild(eye)
+        }
+
+        // Clawed arms
+        for xOff: CGFloat in [-0.35, 0.35] {
+            let arm = SKShapeNode(ellipseOf: CGSize(width: size * 0.15, height: size * 0.3))
+            arm.fillColor = crawlerGray
+            arm.strokeColor = crawlerDark
+            arm.lineWidth = 1
+            arm.position = CGPoint(x: xOff * size, y: -size * 0.1)
+            arm.zRotation = xOff > 0 ? -0.3 : 0.3
+            spriteNode.addChild(arm)
+        }
+    }
+
+    private func setupZombieSpitter(size: CGFloat) {
+        // Ranged zombie - bloated throat, spits acid
+        let spitterPurple = SKColor(red: 0.5, green: 0.4, blue: 0.55, alpha: 1.0)
+        let spitterDark = SKColor(red: 0.35, green: 0.28, blue: 0.4, alpha: 1.0)
+
+        spriteNode = SKShapeNode(circleOfRadius: size / 2)
+        spriteNode.fillColor = spitterPurple
+        spriteNode.strokeColor = spitterDark
+        spriteNode.lineWidth = 2
+        addChild(spriteNode)
+
+        // Bloated throat/chin area
+        let throat = SKShapeNode(ellipseOf: CGSize(width: size * 0.5, height: size * 0.4))
+        throat.fillColor = SKColor(red: 0.6, green: 0.5, blue: 0.3, alpha: 1.0)
+        throat.strokeColor = .clear
+        throat.position = CGPoint(x: 0, y: -size * 0.2)
+        spriteNode.addChild(throat)
+
+        // Sunken eyes
+        for xOff: CGFloat in [-0.15, 0.15] {
+            let eyeSocket = SKShapeNode(circleOfRadius: size * 0.1)
+            eyeSocket.fillColor = SKColor(red: 0.15, green: 0.1, blue: 0.2, alpha: 1.0)
+            eyeSocket.strokeColor = .clear
+            eyeSocket.position = CGPoint(x: xOff * size, y: size * 0.1)
+            spriteNode.addChild(eyeSocket)
+
+            let pupil = SKShapeNode(circleOfRadius: size * 0.04)
+            pupil.fillColor = SKColor(red: 0.4, green: 1.0, blue: 0.5, alpha: 1.0)
+            pupil.strokeColor = .clear
+            pupil.glowWidth = 3
+            eyeSocket.addChild(pupil)
+        }
+
+        // Dripping acid indicator
+        let drip = SKShapeNode(ellipseOf: CGSize(width: size * 0.1, height: size * 0.15))
+        drip.fillColor = SKColor(red: 0.5, green: 0.9, blue: 0.3, alpha: 0.8)
+        drip.strokeColor = .clear
+        drip.glowWidth = 2
+        drip.position = CGPoint(x: size * 0.25, y: 0)
+        spriteNode.addChild(drip)
+    }
+
+    private func setupZombieBrute(size: CGFloat) {
+        // Tank zombie - massive, hulking, armored with bones
+        let bruteGray = SKColor(red: 0.35, green: 0.38, blue: 0.35, alpha: 1.0)
+        let bruteDark = SKColor(red: 0.2, green: 0.22, blue: 0.2, alpha: 1.0)
+
+        // Large body
+        spriteNode = SKShapeNode(circleOfRadius: size / 2)
+        spriteNode.fillColor = bruteGray
+        spriteNode.strokeColor = bruteDark
+        spriteNode.lineWidth = 4
+        addChild(spriteNode)
+
+        // Bone/armor plates
+        let plate1 = SKShapeNode(rectOf: CGSize(width: size * 0.3, height: size * 0.15), cornerRadius: 2)
+        plate1.fillColor = SKColor(red: 0.85, green: 0.8, blue: 0.7, alpha: 1.0)
+        plate1.strokeColor = SKColor(white: 0.6, alpha: 1.0)
+        plate1.lineWidth = 1
+        plate1.position = CGPoint(x: -size * 0.15, y: size * 0.2)
+        plate1.zRotation = 0.2
+        spriteNode.addChild(plate1)
+
+        let plate2 = SKShapeNode(rectOf: CGSize(width: size * 0.25, height: size * 0.12), cornerRadius: 2)
+        plate2.fillColor = SKColor(red: 0.85, green: 0.8, blue: 0.7, alpha: 1.0)
+        plate2.strokeColor = SKColor(white: 0.6, alpha: 1.0)
+        plate2.lineWidth = 1
+        plate2.position = CGPoint(x: size * 0.18, y: size * 0.15)
+        plate2.zRotation = -0.15
+        spriteNode.addChild(plate2)
+
+        // Small angry eyes
+        for xOff: CGFloat in [-0.12, 0.12] {
+            let eye = SKShapeNode(circleOfRadius: size * 0.06)
+            eye.fillColor = SKColor(red: 1.0, green: 0.3, blue: 0.2, alpha: 1.0)
+            eye.strokeColor = .clear
+            eye.glowWidth = 3
+            eye.position = CGPoint(x: xOff * size, y: size * 0.05)
+            spriteNode.addChild(eye)
+        }
+
+        // Exposed jaw/teeth
+        let jaw = SKShapeNode(rectOf: CGSize(width: size * 0.35, height: size * 0.1))
+        jaw.fillColor = SKColor(red: 0.2, green: 0.15, blue: 0.15, alpha: 1.0)
+        jaw.strokeColor = .clear
+        jaw.position = CGPoint(x: 0, y: -size * 0.15)
+        spriteNode.addChild(jaw)
+
+        // Teeth
+        for i in 0..<4 {
+            let tooth = SKShapeNode(rectOf: CGSize(width: size * 0.05, height: size * 0.08))
+            tooth.fillColor = SKColor(red: 0.9, green: 0.85, blue: 0.75, alpha: 1.0)
+            tooth.strokeColor = .clear
+            tooth.position = CGPoint(x: CGFloat(i - 2) * size * 0.08 + size * 0.04, y: 0)
+            jaw.addChild(tooth)
+        }
+    }
+
+    private func setupZombieBloater(size: CGFloat) {
+        // Explosive zombie - swollen, about to burst
+        let bloaterGreen = SKColor(red: 0.45, green: 0.55, blue: 0.3, alpha: 1.0)
+        let bloaterYellow = SKColor(red: 0.6, green: 0.55, blue: 0.25, alpha: 1.0)
+
+        spriteNode = SKShapeNode(circleOfRadius: size / 2)
+        spriteNode.fillColor = bloaterGreen
+        spriteNode.strokeColor = bloaterYellow
+        spriteNode.lineWidth = 2
+        spriteNode.glowWidth = 3
+        addChild(spriteNode)
+
+        // Bulging pustules
+        let pustulePositions: [(CGFloat, CGFloat, CGFloat)] = [
+            (-0.2, 0.25, 0.12),
+            (0.25, 0.15, 0.1),
+            (-0.15, -0.2, 0.08),
+            (0.2, -0.15, 0.09)
+        ]
+        for (xOff, yOff, radius) in pustulePositions {
+            let pustule = SKShapeNode(circleOfRadius: size * radius)
+            pustule.fillColor = SKColor(red: 0.7, green: 0.65, blue: 0.2, alpha: 0.9)
+            pustule.strokeColor = SKColor(red: 0.5, green: 0.45, blue: 0.15, alpha: 1.0)
+            pustule.lineWidth = 1
+            pustule.position = CGPoint(x: xOff * size, y: yOff * size)
+            spriteNode.addChild(pustule)
+        }
+
+        // Dazed eyes (different sizes - asymmetric)
+        let leftEye = SKShapeNode(circleOfRadius: size * 0.08)
+        leftEye.fillColor = SKColor(red: 0.9, green: 0.85, blue: 0.6, alpha: 1.0)
+        leftEye.strokeColor = .clear
+        leftEye.position = CGPoint(x: -size * 0.1, y: size * 0.08)
+        spriteNode.addChild(leftEye)
+
+        let rightEye = SKShapeNode(circleOfRadius: size * 0.06)
+        rightEye.fillColor = SKColor(red: 0.9, green: 0.85, blue: 0.6, alpha: 1.0)
+        rightEye.strokeColor = .clear
+        rightEye.position = CGPoint(x: size * 0.12, y: size * 0.1)
         spriteNode.addChild(rightEye)
 
-        // Add type-specific indicator (minimal)
-        switch enemyType {
-        case .tank:
-            // Tanks get a thicker border
-            spriteNode.lineWidth = 4
-        case .ranged:
-            // Ranged gets a small triangle indicator
-            let indicator = SKShapeNode(circleOfRadius: size * 0.12)
-            indicator.fillColor = .white
-            indicator.strokeColor = .clear
-            indicator.position = CGPoint(x: size * 0.3, y: 0)
-            spriteNode.addChild(indicator)
-        case .suicide:
-            // Suicide gets a warning color pulse (handled elsewhere)
-            spriteNode.glowWidth = 3
-        case .buffer:
-            // Buffer gets a subtle glow
-            spriteNode.glowWidth = 5
-        default:
-            break
+        // Warning indicator (fuse spark) - starts hidden
+        let spark = SKShapeNode(circleOfRadius: size * 0.08)
+        spark.fillColor = SKColor(red: 1.0, green: 0.6, blue: 0.1, alpha: 1.0)
+        spark.strokeColor = .clear
+        spark.glowWidth = 5
+        spark.position = CGPoint(x: 0, y: size * 0.4)
+        spark.name = "spark"
+        spark.isHidden = true
+        spriteNode.addChild(spark)
+    }
+
+    private func setupZombieScreamer(size: CGFloat) {
+        // Buffer zombie - screams to buff others, ethereal look
+        let screamerBlue = SKColor(red: 0.4, green: 0.45, blue: 0.6, alpha: 1.0)
+        let screamerPale = SKColor(red: 0.6, green: 0.62, blue: 0.7, alpha: 1.0)
+
+        spriteNode = SKShapeNode(circleOfRadius: size / 2)
+        spriteNode.fillColor = screamerBlue
+        spriteNode.strokeColor = screamerPale
+        spriteNode.lineWidth = 2
+        spriteNode.glowWidth = 5
+        addChild(spriteNode)
+
+        // Elongated screaming face
+        let face = SKShapeNode(ellipseOf: CGSize(width: size * 0.6, height: size * 0.8))
+        face.fillColor = screamerPale
+        face.strokeColor = screamerBlue
+        face.lineWidth = 1
+        face.position = CGPoint(x: 0, y: size * 0.05)
+        spriteNode.addChild(face)
+
+        // Hollow eye sockets
+        for xOff: CGFloat in [-0.12, 0.12] {
+            let eyeSocket = SKShapeNode(ellipseOf: CGSize(width: size * 0.15, height: size * 0.2))
+            eyeSocket.fillColor = SKColor(red: 0.1, green: 0.1, blue: 0.15, alpha: 1.0)
+            eyeSocket.strokeColor = .clear
+            eyeSocket.position = CGPoint(x: xOff * size, y: size * 0.15)
+            face.addChild(eyeSocket)
+
+            // Eerie glow inside
+            let glow = SKShapeNode(circleOfRadius: size * 0.04)
+            glow.fillColor = SKColor(red: 0.5, green: 0.7, blue: 1.0, alpha: 1.0)
+            glow.strokeColor = .clear
+            glow.glowWidth = 4
+            glow.position = CGPoint(x: 0, y: -size * 0.02)
+            eyeSocket.addChild(glow)
         }
+
+        // Wide open screaming mouth
+        let mouth = SKShapeNode(ellipseOf: CGSize(width: size * 0.25, height: size * 0.35))
+        mouth.fillColor = SKColor(red: 0.1, green: 0.08, blue: 0.12, alpha: 1.0)
+        mouth.strokeColor = .clear
+        mouth.position = CGPoint(x: 0, y: -size * 0.15)
+        face.addChild(mouth)
+
+        // Aura ring (for buff visual)
+        let aura = SKShapeNode(circleOfRadius: size * 0.8)
+        aura.fillColor = .clear
+        aura.strokeColor = SKColor(red: 0.5, green: 0.6, blue: 1.0, alpha: 0.3)
+        aura.lineWidth = 2
+        aura.name = "buffAura"
+        aura.isHidden = true
+        spriteNode.addChild(aura)
     }
 
     private func setupGoblin(size: CGFloat) {

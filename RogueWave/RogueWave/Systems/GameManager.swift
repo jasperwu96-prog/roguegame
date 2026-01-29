@@ -119,6 +119,18 @@ class GameManager {
     var soundEnabled: Bool = true
     var musicEnabled: Bool = true
     var vibrationEnabled: Bool = true
+    var screenShakeEnabled: Bool {
+        get {
+            // Default to true if not set
+            if UserDefaults.standard.object(forKey: "screenShakeEnabled") == nil {
+                return true
+            }
+            return UserDefaults.standard.bool(forKey: "screenShakeEnabled")
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "screenShakeEnabled")
+        }
+    }
 
     // Current run state
     var isRunActive: Bool = false
@@ -157,6 +169,12 @@ class GameManager {
 
     func resetProgress() {
         metaProgression = MetaProgression()
+        saveProgress()
+    }
+
+    func resetAllProgress() {
+        metaProgression = MetaProgression()
+        currentRunStats = RunStatistics()
         saveProgress()
     }
 

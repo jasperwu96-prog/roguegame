@@ -20,6 +20,7 @@ class AudioManager {
     private var soundEffects: [String: SKAction] = [:]
     private var isMusicEnabled: Bool = true
     private var isSFXEnabled: Bool = true
+    private var isHapticsEnabled: Bool = true
     private var musicVolume: Float = 0.5
     private var sfxVolume: Float = 0.7
 
@@ -119,21 +120,24 @@ class AudioManager {
     }
 
     private func loadSettings() {
-        isMusicEnabled = UserDefaults.standard.bool(forKey: "musicEnabled")
-        isSFXEnabled = UserDefaults.standard.bool(forKey: "sfxEnabled")
-
         // Set defaults if not set
         if !UserDefaults.standard.bool(forKey: "audioSettingsSet") {
             isMusicEnabled = true
             isSFXEnabled = true
+            isHapticsEnabled = true
             UserDefaults.standard.set(true, forKey: "audioSettingsSet")
             saveSettings()
+        } else {
+            isMusicEnabled = UserDefaults.standard.bool(forKey: "musicEnabled")
+            isSFXEnabled = UserDefaults.standard.bool(forKey: "sfxEnabled")
+            isHapticsEnabled = UserDefaults.standard.bool(forKey: "hapticsEnabled")
         }
     }
 
     private func saveSettings() {
         UserDefaults.standard.set(isMusicEnabled, forKey: "musicEnabled")
         UserDefaults.standard.set(isSFXEnabled, forKey: "sfxEnabled")
+        UserDefaults.standard.set(isHapticsEnabled, forKey: "hapticsEnabled")
     }
 
     // MARK: - Music Control
@@ -204,21 +208,25 @@ class AudioManager {
     // MARK: - Haptic Feedback
 
     private func triggerHaptic(style: UIImpactFeedbackGenerator.FeedbackStyle) {
+        guard isHapticsEnabled else { return }
         let generator = UIImpactFeedbackGenerator(style: style)
         generator.impactOccurred()
     }
 
     func triggerSuccessHaptic() {
+        guard isHapticsEnabled else { return }
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.success)
     }
 
     func triggerWarningHaptic() {
+        guard isHapticsEnabled else { return }
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.warning)
     }
 
     func triggerErrorHaptic() {
+        guard isHapticsEnabled else { return }
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.error)
     }
@@ -240,6 +248,27 @@ class AudioManager {
         saveSettings()
     }
 
-    var musicEnabled: Bool { isMusicEnabled }
-    var sfxEnabled: Bool { isSFXEnabled }
+    var musicEnabled: Bool {
+        get { isMusicEnabled }
+        set {
+            isMusicEnabled = newValue
+            saveSettings()
+        }
+    }
+
+    var sfxEnabled: Bool {
+        get { isSFXEnabled }
+        set {
+            isSFXEnabled = newValue
+            saveSettings()
+        }
+    }
+
+    var hapticsEnabled: Bool {
+        get { isHapticsEnabled }
+        set {
+            isHapticsEnabled = newValue
+            saveSettings()
+        }
+    }
 }

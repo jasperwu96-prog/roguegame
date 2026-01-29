@@ -15,6 +15,7 @@ class SubMenuView: SKNode {
     private let background: SKShapeNode
     private let titleLabel: SKLabelNode
     private let closeButton: SKShapeNode
+    var contentNode: SKNode?
 
     init(size: CGSize, title: String) {
         self.viewSize = size
@@ -66,7 +67,13 @@ class SubMenuView: SKNode {
         let content = SKNode()
         content.position = CGPoint(x: viewSize.width / 2, y: viewSize.height / 2 - 30)
         addChild(content)
+        contentNode = content
         return content
+    }
+
+    // Override in subclasses to handle specific touches
+    func handleTouch(at location: CGPoint) -> Bool {
+        return false
     }
 }
 
@@ -277,6 +284,9 @@ class CharacterSelectView: SubMenuView {
 
     var onSelect: ((CharacterClass) -> Void)?
     private var selectedClass: CharacterClass
+    private let cardWidth: CGFloat = 130
+    private let cardHeight: CGFloat = 180
+    private let spacing: CGFloat = 15
 
     init(size: CGSize, selectedClass: CharacterClass, onSelect: @escaping (CharacterClass) -> Void) {
         self.selectedClass = selectedClass
@@ -284,10 +294,16 @@ class CharacterSelectView: SubMenuView {
         super.init(size: size, title: "SELECT CHARACTER")
 
         let content = createScrollableContent()
+        rebuildCards(in: content)
+    }
 
-        let cardWidth: CGFloat = 130
-        let cardHeight: CGFloat = 180
-        let spacing: CGFloat = 15
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    private func rebuildCards(in content: SKNode) {
+        // Remove existing cards
+        content.removeAllChildren()
 
         for (index, charClass) in CharacterClass.allCases.enumerated() {
             let x = CGFloat(index - CharacterClass.allCases.count / 2) * (cardWidth + spacing) + (cardWidth + spacing) / 2
@@ -298,8 +314,29 @@ class CharacterSelectView: SubMenuView {
         }
     }
 
-    required init?(coder aDecoder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
+    override func handleTouch(at location: CGPoint) -> Bool {
+        guard let content = contentNode else { return false }
+        let contentLocation = content.convert(location, from: self)
+
+        // Check each character card
+        for charClass in CharacterClass.allCases {
+            if let card = content.childNode(withName: charClass.rawValue) {
+                let cardLocation = card.convert(contentLocation, from: content)
+
+                // Check if touch is within card bounds
+                if abs(cardLocation.x) < cardWidth / 2 && abs(cardLocation.y) < cardHeight / 2 {
+                    // Only select if unlocked and not already selected
+                    if charClass.isUnlocked && charClass != selectedClass {
+                        selectedClass = charClass
+                        rebuildCards(in: content)
+                        onSelect?(charClass)
+                        return true
+                    }
+                }
+            }
+        }
+
+        return false
     }
 
     private func createCharacterCard(_ charClass: CharacterClass, width: CGFloat, height: CGFloat, isSelected: Bool) -> SKNode {
@@ -349,7 +386,7 @@ class CharacterSelectView: SubMenuView {
         desc.position = CGPoint(x: 0, y: height / 2 - 130)
         card.addChild(desc)
 
-        // Select button
+        // Select button or Selected label
         if isUnlocked && !isSelected {
             let selectBtn = SKShapeNode(rectOf: CGSize(width: 80, height: 25), cornerRadius: 12)
             selectBtn.fillColor = charClass.color
@@ -574,15 +611,25 @@ class ChallengesView: SubMenuView {
 
 class SettingsView: SubMenuView {
 
+    private var musicEnabled: Bool = true
+    private var sfxEnabled: Bool = true
+    private var hapticsEnabled: Bool = true
+    private var screenShakeEnabled: Bool = true
+
     init(size: CGSize) {
         super.init(size: size, title: "SETTINGS")
+
+        musicEnabled = AudioManager.shared.musicEnabled
+        sfxEnabled = AudioManager.shared.sfxEnabled
+        hapticsEnabled = AudioManager.shared.hapticsEnabled
+        screenShakeEnabled = GameManager.shared.screenShakeEnabled
 
         let content = createScrollableContent()
 
         // Music toggle
         let musicRow = createToggleRow(
             label: "Music",
-            isOn: AudioManager.shared.musicEnabled,
+            isOn: musicEnabled,
             y: 80
         )
         musicRow.name = "musicToggle"
@@ -591,7 +638,7 @@ class SettingsView: SubMenuView {
         // SFX toggle
         let sfxRow = createToggleRow(
             label: "Sound Effects",
-            isOn: AudioManager.shared.sfxEnabled,
+            isOn: sfxEnabled,
             y: 30
         )
         sfxRow.name = "sfxToggle"
@@ -600,17 +647,19 @@ class SettingsView: SubMenuView {
         // Haptics toggle
         let hapticsRow = createToggleRow(
             label: "Haptic Feedback",
-            isOn: true,
+            isOn: hapticsEnabled,
             y: -20
         )
+        hapticsRow.name = "hapticsToggle"
         content.addChild(hapticsRow)
 
         // Screen shake toggle
         let shakeRow = createToggleRow(
             label: "Screen Shake",
-            isOn: true,
+            isOn: screenShakeEnabled,
             y: -70
         )
+        shakeRow.name = "shakeToggle"
         content.addChild(shakeRow)
 
         // Credits
@@ -642,6 +691,122 @@ class SettingsView: SubMenuView {
         fatalError("init(coder:) has not been implemented")
     }
 
+    override func handleTouch(at location: CGPoint) -> Bool {
+        guard let content = contentNode else { return false }
+        let contentLocation = content.convert(location, from: self)
+
+        // Check toggle rows
+        let toggles: [(String, CGFloat)] = [
+            ("musicToggle", 80),
+            ("sfxToggle", 30),
+            ("hapticsToggle", -20),
+            ("shakeToggle", -70)
+        ]
+
+        for (name, y) in toggles {
+            // Check if touch is in toggle area (right side where toggle switch is)
+            if contentLocation.x > 50 && contentLocation.x < 150 &&
+               contentLocation.y > y - 20 && contentLocation.y < y + 20 {
+                toggleSetting(name)
+                return true
+            }
+        }
+
+        // Check reset button
+        if let resetBtn = content.childNode(withName: "resetButton") as? SKShapeNode {
+            let resetLocation = resetBtn.convert(contentLocation, from: content)
+            if resetBtn.contains(resetLocation) {
+                resetProgress()
+                return true
+            }
+        }
+
+        return false
+    }
+
+    private func toggleSetting(_ name: String) {
+        guard let content = contentNode,
+              let row = content.childNode(withName: name) else { return }
+
+        // Find the toggle background (SKShapeNode at position x: 100)
+        for child in row.children {
+            if let toggleBg = child as? SKShapeNode,
+               toggleBg.position.x == 100 {
+                // Get current state and toggle
+                var isOn: Bool
+                switch name {
+                case "musicToggle":
+                    musicEnabled.toggle()
+                    isOn = musicEnabled
+                    AudioManager.shared.musicEnabled = isOn
+                    if isOn {
+                        AudioManager.shared.playBackgroundMusic()
+                    } else {
+                        AudioManager.shared.stopBackgroundMusic()
+                    }
+                case "sfxToggle":
+                    sfxEnabled.toggle()
+                    isOn = sfxEnabled
+                    AudioManager.shared.sfxEnabled = isOn
+                case "hapticsToggle":
+                    hapticsEnabled.toggle()
+                    isOn = hapticsEnabled
+                    AudioManager.shared.hapticsEnabled = isOn
+                case "shakeToggle":
+                    screenShakeEnabled.toggle()
+                    isOn = screenShakeEnabled
+                    GameManager.shared.screenShakeEnabled = isOn
+                default:
+                    return
+                }
+
+                // Update visual
+                toggleBg.fillColor = isOn ?
+                    SKColor(red: 0.2, green: 0.6, blue: 0.3, alpha: 1.0) :
+                    SKColor(white: 0.25, alpha: 1.0)
+
+                // Animate knob
+                if let knob = toggleBg.children.first as? SKShapeNode {
+                    let moveAction = SKAction.moveTo(x: isOn ? 12 : -12, duration: 0.15)
+                    moveAction.timingMode = .easeOut
+                    knob.run(moveAction)
+                }
+                break
+            }
+        }
+    }
+
+    private func resetProgress() {
+        // Flash the button
+        guard let content = contentNode,
+              let resetBtn = content.childNode(withName: "resetButton") as? SKShapeNode else { return }
+
+        let flash = SKAction.sequence([
+            SKAction.run { resetBtn.fillColor = SKColor(red: 1.0, green: 0.3, blue: 0.3, alpha: 1.0) },
+            SKAction.wait(forDuration: 0.1),
+            SKAction.run { resetBtn.fillColor = SKColor(red: 0.6, green: 0.15, blue: 0.15, alpha: 1.0) }
+        ])
+        resetBtn.run(flash)
+
+        // Reset game progress
+        GameManager.shared.resetAllProgress()
+        AchievementManager.shared.resetProgress()
+
+        // Show confirmation
+        let confirmLabel = SKLabelNode(fontNamed: UIConfig.fontName)
+        confirmLabel.text = "Progress Reset!"
+        confirmLabel.fontSize = 14
+        confirmLabel.fontColor = SKColor(red: 1.0, green: 0.5, blue: 0.5, alpha: 1.0)
+        confirmLabel.position = CGPoint(x: 0, y: -235)
+        content.addChild(confirmLabel)
+
+        confirmLabel.run(SKAction.sequence([
+            SKAction.wait(forDuration: 2.0),
+            SKAction.fadeOut(withDuration: 0.5),
+            SKAction.removeFromParent()
+        ]))
+    }
+
     private func createToggleRow(label: String, isOn: Bool, y: CGFloat) -> SKNode {
         let row = SKNode()
         row.position = CGPoint(x: 0, y: y)
@@ -667,6 +832,7 @@ class SettingsView: SubMenuView {
         toggleKnob.fillColor = .white
         toggleKnob.strokeColor = .clear
         toggleKnob.position = CGPoint(x: isOn ? 12 : -12, y: 0)
+        toggleKnob.name = "knob"
         toggleBg.addChild(toggleKnob)
 
         return row

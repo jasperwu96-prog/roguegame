@@ -228,15 +228,24 @@ class MainMenuScene: SKScene {
         guard let touch = touches.first else { return }
         let location = touch.location(in: self)
 
-        // Check if touching a submenu close button
-        if let submenu = currentSubMenu {
+        // If submenu is open, pass touches to it
+        if let submenu = currentSubMenu as? SubMenuView {
             let submenuLocation = touch.location(in: submenu)
+
+            // Check close button
             if let closeButton = submenu.childNode(withName: "closeButton") {
                 if closeButton.contains(submenuLocation) {
                     closeSubMenu()
+                    AudioManager.shared.playSFX(.buttonPress, on: self)
                     return
                 }
             }
+
+            // Let submenu handle the touch
+            if submenu.handleTouch(at: submenuLocation) {
+                AudioManager.shared.playSFX(.buttonPress, on: self)
+            }
+            return
         }
 
         // Handle menu button touches
@@ -244,9 +253,6 @@ class MainMenuScene: SKScene {
     }
 
     private func handleButtonTouch(at location: CGPoint) {
-        // Don't handle touches if submenu is open
-        if currentSubMenu != nil { return }
-
         let menuLocation = menuContainer.convert(location, from: self)
 
         let buttons = [playButton, charactersButton, upgradesButton,

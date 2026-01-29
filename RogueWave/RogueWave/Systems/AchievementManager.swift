@@ -268,4 +268,8 @@ class AchievementManager {
         recentlyUnlocked.removeAll()
         saveAchievements()
     }
+
+    func resetProgress() {
+        resetAllAchievements()
+    }
 }

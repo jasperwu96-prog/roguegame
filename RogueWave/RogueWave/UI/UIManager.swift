@@ -395,8 +395,7 @@ extension UIManager: PauseScreenDelegate {
 
     func quitTapped() {
         hidePauseScreen()
-        delegate?.pauseButtonPressed()  // Unpause first
-        delegate?.restartButtonPressed()  // Then restart
+        delegate?.mainMenuButtonPressed()  // Return to main menu
     }
 }
 

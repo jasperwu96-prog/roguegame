@@ -15,10 +15,10 @@ class Projectile: SKNode {
 
     private var spriteNode: SKShapeNode!
 
-    let damage: CGFloat
+    var damage: CGFloat
     let moveSpeed: CGFloat
     let angle: CGFloat
-    let isPlayerProjectile: Bool
+    var isPlayerProjectile: Bool
     let piercing: Bool
     let homing: Bool
     let isCritical: Bool
@@ -274,14 +274,24 @@ class Projectile: SKNode {
     // MARK: - Reflect (for Reflect ability)
 
     func reflect() {
-        // Reverse direction
-        direction = CGPoint(x: -direction.x, y: -direction.y)
+        // Reverse direction using physics body velocity
+        if let velocity = physicsBody?.velocity {
+            physicsBody?.velocity = CGVector(dx: -velocity.dx, dy: -velocity.dy)
+
+            // Update sprite rotation to face new direction
+            let newAngle = atan2(-velocity.dy, -velocity.dx)
+            spriteNode.zRotation = newAngle - .pi / 2
+        }
 
         // Increase damage when reflected
         damage *= 1.5
 
         // Mark as player projectile now
         isPlayerProjectile = true
+
+        // Update physics category
+        physicsBody?.categoryBitMask = GameConfig.PhysicsCategory.playerProjectile
+        physicsBody?.contactTestBitMask = GameConfig.PhysicsCategory.enemy
 
         // Visual change - make it glow gold
         spriteNode.fillColor = SKColor(red: 1.0, green: 0.85, blue: 0.2, alpha: 1.0)

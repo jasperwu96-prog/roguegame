@@ -215,6 +215,20 @@ class WaveManager {
             remaining -= tankCount
         }
 
+        // Add suicide bombers (wave 6+) - forces player movement
+        if wave >= 6 && remaining > 0 {
+            let suicideCount = min(remaining, max(1, Int(CGFloat(totalCount) * 0.1)))
+            spawns.append((.suicide, suicideCount))
+            remaining -= suicideCount
+        }
+
+        // Add buffers (wave 8+) - makes other enemies stronger
+        if wave >= 8 && remaining > 0 {
+            let bufferCount = min(remaining, max(1, Int(CGFloat(totalCount) * 0.05) + 1))
+            spawns.append((.buffer, bufferCount))
+            remaining -= bufferCount
+        }
+
         // Any remaining go to chasers
         if remaining > 0 {
             if let index = spawns.firstIndex(where: { $0.0 == .chaser }) {

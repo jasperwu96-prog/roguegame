@@ -61,6 +61,21 @@ class Enemy: SKNode {
     var chargeCooldown: TimeInterval = 0
     var lastChargeTime: TimeInterval = 0
 
+    // Suicide enemy properties
+    var isSuicideType: Bool = false
+    var fuseActive: Bool = false
+    var fuseTimer: TimeInterval = 0
+    var explosionRadius: CGFloat = 0
+    var hasExploded: Bool = false
+
+    // Buffer enemy properties
+    var isBufferType: Bool = false
+    var lastBuffTime: TimeInterval = 0
+    var buffRadius: CGFloat = 0
+    var isBuffed: Bool = false  // Whether this enemy has been buffed by a buffer
+    var buffedDamageMultiplier: CGFloat = 1.0
+    var buffedSpeedMultiplier: CGFloat = 1.0
+
     // Target reference
     weak var target: Player?
 
@@ -136,6 +151,28 @@ class Enemy: SKNode {
             self.projectileSpeed = EnemyConfig.Tank.projectileSpeed
             self.attackRange = EnemyConfig.Tank.attackRange
             self.attackCooldown = EnemyConfig.Tank.attackCooldown
+
+        case .suicide:
+            baseHealth = EnemyConfig.Suicide.baseHealth
+            baseSpeed = EnemyConfig.Suicide.baseSpeed
+            baseDamage = EnemyConfig.Suicide.baseDamage
+            baseXP = EnemyConfig.Suicide.xpValue
+            size = EnemyConfig.Suicide.size
+            color = EnemyConfig.Suicide.color
+            self.isSuicideType = true
+            self.explosionRadius = EnemyConfig.Suicide.explosionRadius
+            self.canShoot = false
+
+        case .buffer:
+            baseHealth = EnemyConfig.Buffer.baseHealth
+            baseSpeed = EnemyConfig.Buffer.baseSpeed
+            baseDamage = EnemyConfig.Buffer.baseDamage
+            baseXP = EnemyConfig.Buffer.xpValue
+            size = EnemyConfig.Buffer.size
+            color = EnemyConfig.Buffer.color
+            self.isBufferType = true
+            self.buffRadius = EnemyConfig.Buffer.buffRadius
+            self.canShoot = false
 
         case .elite, .boss:
             // Elite and boss are modifiers applied to other types
@@ -214,6 +251,10 @@ class Enemy: SKNode {
             setupSkeletonArcher(size: size)
         case .tank:
             setupOrc(size: size)
+        case .suicide:
+            setupSuicideBomber(size: size)
+        case .buffer:
+            setupBufferMage(size: size)
         }
     }
 
@@ -523,6 +564,146 @@ class Enemy: SKNode {
         head.addChild(scar)
     }
 
+    private func setupSuicideBomber(size: CGFloat) {
+        // Round bomb-like body
+        spriteNode = SKShapeNode(circleOfRadius: size * 0.45)
+        spriteNode.fillColor = SKColor(red: 0.2, green: 0.15, blue: 0.1, alpha: 1.0)  // Dark bomb color
+        spriteNode.strokeColor = SKColor(red: 0.4, green: 0.3, blue: 0.2, alpha: 1.0)
+        spriteNode.lineWidth = 3
+        addChild(spriteNode)
+
+        // Fuse on top
+        let fusePath = CGMutablePath()
+        fusePath.move(to: CGPoint(x: 0, y: size * 0.35))
+        fusePath.addQuadCurve(to: CGPoint(x: size * 0.15, y: size * 0.55),
+                               control: CGPoint(x: size * 0.2, y: size * 0.4))
+        let fuse = SKShapeNode(path: fusePath)
+        fuse.strokeColor = SKColor(red: 0.6, green: 0.5, blue: 0.3, alpha: 1.0)
+        fuse.lineWidth = 3
+        fuse.name = "fuse"
+        spriteNode.addChild(fuse)
+
+        // Spark at fuse tip (initially hidden)
+        let spark = SKShapeNode(circleOfRadius: size * 0.08)
+        spark.fillColor = SKColor.orange
+        spark.strokeColor = SKColor.yellow
+        spark.glowWidth = 8
+        spark.position = CGPoint(x: size * 0.15, y: size * 0.55)
+        spark.name = "spark"
+        spark.isHidden = true
+        spriteNode.addChild(spark)
+
+        // Angry face on bomb
+        let leftEye = SKShapeNode(circleOfRadius: size * 0.08)
+        leftEye.fillColor = SKColor.red
+        leftEye.strokeColor = .clear
+        leftEye.glowWidth = 3
+        leftEye.position = CGPoint(x: -size * 0.15, y: size * 0.1)
+        spriteNode.addChild(leftEye)
+
+        let rightEye = SKShapeNode(circleOfRadius: size * 0.08)
+        rightEye.fillColor = SKColor.red
+        rightEye.strokeColor = .clear
+        rightEye.glowWidth = 3
+        rightEye.position = CGPoint(x: size * 0.15, y: size * 0.1)
+        spriteNode.addChild(rightEye)
+
+        // Angry mouth
+        let mouthPath = CGMutablePath()
+        mouthPath.move(to: CGPoint(x: -size * 0.15, y: -size * 0.1))
+        mouthPath.addQuadCurve(to: CGPoint(x: size * 0.15, y: -size * 0.1),
+                                control: CGPoint(x: 0, y: -size * 0.2))
+        let mouth = SKShapeNode(path: mouthPath)
+        mouth.strokeColor = SKColor.red
+        mouth.lineWidth = 2
+        spriteNode.addChild(mouth)
+
+        // Warning symbol
+        let warning = SKLabelNode(fontNamed: UIConfig.fontName)
+        warning.text = "!"
+        warning.fontSize = size * 0.4
+        warning.fontColor = SKColor.yellow
+        warning.position = CGPoint(x: 0, y: -size * 0.35)
+        warning.isHidden = true
+        warning.name = "warning"
+        spriteNode.addChild(warning)
+    }
+
+    private func setupBufferMage(size: CGFloat) {
+        // Robed mage body
+        let bodyPath = CGMutablePath()
+        bodyPath.move(to: CGPoint(x: -size * 0.35, y: -size * 0.4))
+        bodyPath.addLine(to: CGPoint(x: -size * 0.25, y: size * 0.1))
+        bodyPath.addLine(to: CGPoint(x: 0, y: size * 0.2))
+        bodyPath.addLine(to: CGPoint(x: size * 0.25, y: size * 0.1))
+        bodyPath.addLine(to: CGPoint(x: size * 0.35, y: -size * 0.4))
+        bodyPath.closeSubpath()
+
+        spriteNode = SKShapeNode(path: bodyPath)
+        spriteNode.fillColor = SKColor(red: 0.4, green: 0.2, blue: 0.6, alpha: 1.0)  // Purple robe
+        spriteNode.strokeColor = SKColor(red: 0.6, green: 0.4, blue: 0.8, alpha: 1.0)
+        spriteNode.lineWidth = 2
+        addChild(spriteNode)
+
+        // Hood/head
+        let hood = SKShapeNode(circleOfRadius: size * 0.22)
+        hood.fillColor = SKColor(red: 0.35, green: 0.15, blue: 0.5, alpha: 1.0)
+        hood.strokeColor = SKColor(red: 0.5, green: 0.3, blue: 0.7, alpha: 1.0)
+        hood.lineWidth = 2
+        hood.position = CGPoint(x: 0, y: size * 0.15)
+        spriteNode.addChild(hood)
+
+        // Glowing eyes
+        let leftEye = SKShapeNode(circleOfRadius: size * 0.05)
+        leftEye.fillColor = SKColor(red: 1.0, green: 0.8, blue: 0.2, alpha: 1.0)
+        leftEye.strokeColor = .clear
+        leftEye.glowWidth = 5
+        leftEye.position = CGPoint(x: -size * 0.08, y: 0)
+        hood.addChild(leftEye)
+
+        let rightEye = SKShapeNode(circleOfRadius: size * 0.05)
+        rightEye.fillColor = SKColor(red: 1.0, green: 0.8, blue: 0.2, alpha: 1.0)
+        rightEye.strokeColor = .clear
+        rightEye.glowWidth = 5
+        rightEye.position = CGPoint(x: size * 0.08, y: 0)
+        hood.addChild(rightEye)
+
+        // Staff
+        let staffPath = CGMutablePath()
+        staffPath.move(to: CGPoint(x: size * 0.35, y: -size * 0.3))
+        staffPath.addLine(to: CGPoint(x: size * 0.4, y: size * 0.45))
+        let staff = SKShapeNode(path: staffPath)
+        staff.strokeColor = SKColor(red: 0.5, green: 0.35, blue: 0.2, alpha: 1.0)
+        staff.lineWidth = 4
+        spriteNode.addChild(staff)
+
+        // Staff orb
+        let orb = SKShapeNode(circleOfRadius: size * 0.12)
+        orb.fillColor = SKColor(red: 0.8, green: 0.6, blue: 1.0, alpha: 0.8)
+        orb.strokeColor = SKColor(red: 1.0, green: 0.8, blue: 1.0, alpha: 1.0)
+        orb.lineWidth = 2
+        orb.glowWidth = 10
+        orb.position = CGPoint(x: size * 0.4, y: size * 0.5)
+        orb.name = "staffOrb"
+        spriteNode.addChild(orb)
+
+        // Pulsing orb animation
+        let pulse = SKAction.repeatForever(SKAction.sequence([
+            SKAction.scale(to: 1.2, duration: 0.5),
+            SKAction.scale(to: 1.0, duration: 0.5)
+        ]))
+        orb.run(pulse)
+
+        // Buff aura (shown when buffing)
+        let aura = SKShapeNode(circleOfRadius: size * 0.6)
+        aura.fillColor = SKColor(red: 0.8, green: 0.6, blue: 1.0, alpha: 0.15)
+        aura.strokeColor = SKColor(red: 0.9, green: 0.7, blue: 1.0, alpha: 0.4)
+        aura.lineWidth = 2
+        aura.name = "buffAura"
+        aura.isHidden = true
+        spriteNode.addChild(aura)
+    }
+
     private func setupPhysics(size: CGFloat) {
         let body = SKPhysicsBody(circleOfRadius: size / 2)
         body.isDynamic = true
@@ -616,6 +797,17 @@ class Enemy: SKNode {
             lastChargeTime += deltaTime
         }
 
+        // Special enemy type behaviors
+        if isSuicideType {
+            updateSuicideBehavior(deltaTime: deltaTime, target: target)
+            return
+        }
+
+        if isBufferType {
+            updateBufferBehavior(deltaTime: deltaTime, target: target)
+            return
+        }
+
         // Movement and attack behavior - enemies that can shoot use ranged behavior
         if canShoot {
             updateRangedBehavior(deltaTime: deltaTime, target: target)
@@ -624,6 +816,249 @@ class Enemy: SKNode {
         }
 
         lastAttackTime += deltaTime
+    }
+
+    // MARK: - Suicide Enemy Behavior
+
+    private func updateSuicideBehavior(deltaTime: TimeInterval, target: Player) {
+        let distanceToTarget = distanceTo(target)
+        let direction = directionTo(target)
+
+        // Apply speed buff if buffed
+        let effectiveSpeed = moveSpeed * buffedSpeedMultiplier
+
+        // Always chase the player
+        physicsBody?.velocity = CGVector(dx: direction.x * effectiveSpeed, dy: direction.y * effectiveSpeed)
+
+        // Rotate to face player
+        let angle = atan2(direction.y, direction.x) - .pi / 2
+        spriteNode.zRotation = angle
+
+        // Check if close enough to start fuse
+        if distanceToTarget < EnemyConfig.Suicide.triggerRange && !fuseActive {
+            startFuse()
+        }
+
+        // Update fuse timer
+        if fuseActive {
+            fuseTimer += deltaTime
+
+            // Flash faster as timer progresses
+            let flashRate = max(0.1, 0.3 - (fuseTimer / EnemyConfig.Suicide.fuseTime) * 0.2)
+            if Int(fuseTimer / flashRate) % 2 == 0 {
+                spriteNode.fillColor = SKColor.red
+            } else {
+                spriteNode.fillColor = SKColor.orange
+            }
+
+            // Explode when timer completes
+            if fuseTimer >= EnemyConfig.Suicide.fuseTime {
+                explode()
+            }
+        }
+    }
+
+    private func startFuse() {
+        fuseActive = true
+        fuseTimer = 0
+
+        // Show spark
+        if let spark = spriteNode.childNode(withName: "spark") {
+            spark.isHidden = false
+            // Flickering animation
+            let flicker = SKAction.repeatForever(SKAction.sequence([
+                SKAction.fadeAlpha(to: 0.5, duration: 0.05),
+                SKAction.fadeAlpha(to: 1.0, duration: 0.05)
+            ]))
+            spark.run(flicker)
+        }
+
+        // Show warning
+        if let warning = spriteNode.childNode(withName: "warning") {
+            warning.isHidden = false
+            let blink = SKAction.repeatForever(SKAction.sequence([
+                SKAction.fadeAlpha(to: 0.3, duration: 0.15),
+                SKAction.fadeAlpha(to: 1.0, duration: 0.15)
+            ]))
+            warning.run(blink)
+        }
+
+        // Ticking sound/haptic
+        AudioManager.shared.triggerWarningHaptic()
+    }
+
+    private func explode() {
+        guard !hasExploded else { return }
+        hasExploded = true
+
+        // Apply buff multiplier to damage
+        let explosionDamage = damage * buffedDamageMultiplier
+
+        // Check if player is in range
+        if let target = target {
+            let distanceToTarget = distanceTo(target)
+            if distanceToTarget <= explosionRadius {
+                delegate?.enemyDidDamagePlayer(self, damage: explosionDamage)
+            }
+        }
+
+        // Visual explosion effect
+        let explosion = SKShapeNode(circleOfRadius: explosionRadius)
+        explosion.fillColor = SKColor.orange.withAlphaComponent(0.6)
+        explosion.strokeColor = SKColor.red
+        explosion.lineWidth = 4
+        explosion.glowWidth = 15
+        explosion.position = position
+        explosion.zPosition = GameConfig.ZPosition.effects
+        explosion.setScale(0.1)
+        parent?.addChild(explosion)
+
+        let expandAction = SKAction.sequence([
+            SKAction.group([
+                SKAction.scale(to: 1.0, duration: 0.15),
+                SKAction.fadeAlpha(to: 0.8, duration: 0.15)
+            ]),
+            SKAction.group([
+                SKAction.scale(to: 1.3, duration: 0.1),
+                SKAction.fadeOut(withDuration: 0.2)
+            ]),
+            SKAction.removeFromParent()
+        ])
+        explosion.run(expandAction)
+
+        // Haptic feedback
+        AudioManager.shared.triggerErrorHaptic()
+
+        // Die after explosion
+        die()
+    }
+
+    // MARK: - Buffer Enemy Behavior
+
+    private func updateBufferBehavior(deltaTime: TimeInterval, target: Player) {
+        let distanceToTarget = distanceTo(target)
+        let direction = directionTo(target)
+
+        // Buffers keep moderate distance from player
+        let preferredDistance: CGFloat = 200
+
+        if distanceToTarget > preferredDistance + 50 {
+            // Move closer
+            physicsBody?.velocity = CGVector(dx: direction.x * moveSpeed, dy: direction.y * moveSpeed)
+        } else if distanceToTarget < preferredDistance - 50 {
+            // Back away
+            physicsBody?.velocity = CGVector(dx: -direction.x * moveSpeed * 0.5, dy: -direction.y * moveSpeed * 0.5)
+        } else {
+            // Stay in place
+            physicsBody?.velocity = .zero
+        }
+
+        // Rotate to face player
+        let angle = atan2(direction.y, direction.x) - .pi / 2
+        spriteNode.zRotation = angle
+
+        // Buff nearby allies periodically
+        lastBuffTime += deltaTime
+        if lastBuffTime >= EnemyConfig.Buffer.buffInterval {
+            lastBuffTime = 0
+            castBuff()
+        }
+    }
+
+    private func castBuff() {
+        // Show buff aura
+        if let aura = spriteNode.childNode(withName: "buffAura") {
+            aura.isHidden = false
+            aura.setScale(0.5)
+            aura.alpha = 0.8
+
+            let expandFade = SKAction.sequence([
+                SKAction.group([
+                    SKAction.scale(to: 2.0, duration: 0.5),
+                    SKAction.fadeOut(withDuration: 0.5)
+                ]),
+                SKAction.run { aura.isHidden = true; aura.setScale(0.5); aura.alpha = 0.8 }
+            ])
+            aura.run(expandFade)
+        }
+
+        // Staff orb glow
+        if let orb = spriteNode.childNode(withName: "staffOrb") as? SKShapeNode {
+            let originalGlow = orb.glowWidth
+            orb.glowWidth = 20
+
+            let resetGlow = SKAction.sequence([
+                SKAction.wait(forDuration: 0.3),
+                SKAction.run { orb.glowWidth = originalGlow }
+            ])
+            orb.run(resetGlow)
+        }
+
+        // Notify delegate to buff nearby enemies
+        // This is handled by GameScene which has access to all enemies
+        delegate?.enemyDidShoot(self, projectile: createBuffProjectile())
+    }
+
+    private func createBuffProjectile() -> Projectile {
+        // Create a "fake" projectile that signals a buff event
+        // GameScene will intercept this and apply buffs to nearby enemies
+        let proj = Projectile(
+            damage: 0,
+            speed: 0,
+            angle: 0,
+            isPlayerProjectile: false,
+            piercing: false,
+            homing: false,
+            isCritical: false
+        )
+        proj.name = "buff_signal"
+        return proj
+    }
+
+    // Method to receive a buff from a buffer enemy
+    func applyBuff(damageMultiplier: CGFloat, speedMultiplier: CGFloat) {
+        guard !isBuffed else { return }  // Already buffed
+
+        isBuffed = true
+        buffedDamageMultiplier = damageMultiplier
+        buffedSpeedMultiplier = speedMultiplier
+
+        // Visual buff indicator
+        let buffGlow = SKShapeNode(circleOfRadius: spriteNode.frame.width * 0.6)
+        buffGlow.fillColor = SKColor(red: 0.8, green: 0.6, blue: 1.0, alpha: 0.2)
+        buffGlow.strokeColor = SKColor(red: 0.9, green: 0.7, blue: 1.0, alpha: 0.6)
+        buffGlow.lineWidth = 2
+        buffGlow.name = "buffGlow"
+        addChild(buffGlow)
+
+        // Pulsing effect
+        let pulse = SKAction.repeatForever(SKAction.sequence([
+            SKAction.scale(to: 1.15, duration: 0.3),
+            SKAction.scale(to: 1.0, duration: 0.3)
+        ]))
+        buffGlow.run(pulse)
+
+        // Buff expires after some time
+        let expireBuff = SKAction.sequence([
+            SKAction.wait(forDuration: 5.0),
+            SKAction.run { [weak self] in
+                self?.removeBuff()
+            }
+        ])
+        run(expireBuff, withKey: "buffExpire")
+    }
+
+    private func removeBuff() {
+        isBuffed = false
+        buffedDamageMultiplier = 1.0
+        buffedSpeedMultiplier = 1.0
+
+        if let buffGlow = childNode(withName: "buffGlow") {
+            buffGlow.run(SKAction.sequence([
+                SKAction.fadeOut(withDuration: 0.3),
+                SKAction.removeFromParent()
+            ]))
+        }
     }
 
     private func updateChaserBehavior(deltaTime: TimeInterval, target: Player) {

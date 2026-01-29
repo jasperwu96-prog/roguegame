@@ -135,6 +135,12 @@ class Player: SKNode {
     private var lastAttackTime: TimeInterval = 0
     private var movementVector: CGVector = .zero
 
+    // Momentum-based movement
+    private var currentVelocity: CGVector = .zero
+    private let acceleration: CGFloat = 15.0  // How fast we accelerate
+    private let deceleration: CGFloat = 10.0  // How fast we slow down
+    private let maxSpeedMultiplier: CGFloat = 1.0  // Max velocity as multiplier of stats.speed
+
     // Attack target
     weak var currentTarget: Enemy?
 
@@ -422,24 +428,48 @@ class Player: SKNode {
     }
 
     private func applyMovement() {
-        guard movementVector != .zero else {
-            physicsBody?.velocity = .zero
-            return
+        let maxSpeed = stats.speed * maxSpeedMultiplier
+
+        if movementVector != .zero {
+            // Normalize input
+            let length = sqrt(movementVector.dx * movementVector.dx + movementVector.dy * movementVector.dy)
+            let normalizedX = movementVector.dx / length
+            let normalizedY = movementVector.dy / length
+
+            // Target velocity based on input
+            let targetVelocity = CGVector(
+                dx: normalizedX * maxSpeed,
+                dy: normalizedY * maxSpeed
+            )
+
+            // Smooth acceleration toward target velocity
+            currentVelocity.dx += (targetVelocity.dx - currentVelocity.dx) * acceleration * 0.016
+            currentVelocity.dy += (targetVelocity.dy - currentVelocity.dy) * acceleration * 0.016
+
+            // Rotate player to face movement direction
+            let angle = atan2(movementVector.dy, movementVector.dx) - .pi / 2
+            spriteNode.zRotation = angle
+        } else {
+            // Smooth deceleration when no input
+            currentVelocity.dx *= (1.0 - deceleration * 0.016)
+            currentVelocity.dy *= (1.0 - deceleration * 0.016)
+
+            // Stop completely when very slow
+            let currentSpeed = sqrt(currentVelocity.dx * currentVelocity.dx + currentVelocity.dy * currentVelocity.dy)
+            if currentSpeed < 5 {
+                currentVelocity = .zero
+            }
         }
 
-        // Normalize and apply speed
-        let length = sqrt(movementVector.dx * movementVector.dx + movementVector.dy * movementVector.dy)
-        let normalizedX = movementVector.dx / length
-        let normalizedY = movementVector.dy / length
+        // Clamp to max speed
+        let currentSpeed = sqrt(currentVelocity.dx * currentVelocity.dx + currentVelocity.dy * currentVelocity.dy)
+        if currentSpeed > maxSpeed {
+            let scale = maxSpeed / currentSpeed
+            currentVelocity.dx *= scale
+            currentVelocity.dy *= scale
+        }
 
-        physicsBody?.velocity = CGVector(
-            dx: normalizedX * stats.speed,
-            dy: normalizedY * stats.speed
-        )
-
-        // Rotate player to face movement direction
-        let angle = atan2(movementVector.dy, movementVector.dx) - .pi / 2
-        spriteNode.zRotation = angle
+        physicsBody?.velocity = currentVelocity
     }
 
     // MARK: - Combat

@@ -128,6 +128,33 @@ enum EnemyConfig {
         static let attackCooldown: TimeInterval = 3.0  // Slow but deadly
     }
 
+    // Suicide enemy - explodes when near player, forces movement
+    enum Suicide {
+        static let baseHealth: CGFloat = 20
+        static let baseSpeed: CGFloat = 220  // Fast - rushes player
+        static let baseDamage: CGFloat = 40  // High explosion damage
+        static let size: CGFloat = 25
+        static let color: SKColor = SKColor(red: 1.0, green: 0.3, blue: 0.1, alpha: 1.0)  // Orange-red
+        static let xpValue: Int = 25
+        static let explosionRadius: CGFloat = 80
+        static let fuseTime: TimeInterval = 1.5  // Time before exploding when in range
+        static let triggerRange: CGFloat = 50  // Range to start fuse
+    }
+
+    // Buffer enemy - strengthens nearby allies
+    enum Buffer {
+        static let baseHealth: CGFloat = 25
+        static let baseSpeed: CGFloat = 100
+        static let baseDamage: CGFloat = 5
+        static let size: CGFloat = 32
+        static let color: SKColor = SKColor(red: 0.8, green: 0.6, blue: 1.0, alpha: 1.0)  // Purple
+        static let xpValue: Int = 35
+        static let buffRadius: CGFloat = 150
+        static let buffInterval: TimeInterval = 3.0
+        static let damageBuffPercent: CGFloat = 0.3  // 30% damage boost
+        static let speedBuffPercent: CGFloat = 0.2   // 20% speed boost
+    }
+
     enum Elite {
         static let healthMultiplier: CGFloat = 3.0
         static let damageMultiplier: CGFloat = 1.5
@@ -268,6 +295,8 @@ enum EnemyType: String, CaseIterable, Codable {
     case swarm
     case ranged
     case tank
+    case suicide   // Explodes near player - forces movement
+    case buffer    // Strengthens nearby allies
     case elite
     case boss
 }

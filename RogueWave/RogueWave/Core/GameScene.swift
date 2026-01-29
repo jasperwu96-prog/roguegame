@@ -48,10 +48,16 @@ class GameScene: SKScene {
     // Statistics
     private var killCount: Int = 0
     private var rerollsRemaining: Int = 0
+    private var bossKillCount: Int = 0
+    private var totalDamageDealt: Int = 0
+    private var damageTakenThisWave: CGFloat = 0
 
     // Wave 10+ skill checks - danger zones
     private var lastDangerZoneTime: TimeInterval = 0
     private var dangerZones: [SKNode] = []
+
+    // Achievement tracking
+    private var waveStartTime: TimeInterval = 0
 
     // Chunk coordinate helper
     private struct ChunkCoord: Hashable {
@@ -70,12 +76,76 @@ class GameScene: SKScene {
         setupJoystick()
         setupSystems()
         setupUI()
+        setupAchievements()
 
         // Generate initial world around player
         updateInfiniteWorld()
 
         // Start the game
         startGame()
+
+        // Start background music
+        AudioManager.shared.playBackgroundMusic()
+    }
+
+    private func setupAchievements() {
+        AchievementManager.shared.onAchievementUnlocked = { [weak self] achievement in
+            self?.showAchievementUnlock(achievement)
+        }
+    }
+
+    private func showAchievementUnlock(_ achievement: Achievement) {
+        // Create achievement banner
+        let banner = SKNode()
+        banner.zPosition = GameConfig.ZPosition.overlay
+
+        // Background
+        let bg = SKShapeNode(rectOf: CGSize(width: 280, height: 60), cornerRadius: 10)
+        bg.fillColor = SKColor(red: 0.1, green: 0.1, blue: 0.15, alpha: 0.95)
+        bg.strokeColor = SKColor.yellow
+        bg.lineWidth = 2
+        bg.glowWidth = 3
+        banner.addChild(bg)
+
+        // Trophy icon
+        let trophy = SKLabelNode(fontNamed: UIConfig.fontName)
+        trophy.text = "🏆"
+        trophy.fontSize = 28
+        trophy.position = CGPoint(x: -110, y: -8)
+        banner.addChild(trophy)
+
+        // Title
+        let title = SKLabelNode(fontNamed: UIConfig.fontName)
+        title.text = "Achievement Unlocked!"
+        title.fontSize = 12
+        title.fontColor = SKColor.yellow
+        title.position = CGPoint(x: 10, y: 12)
+        banner.addChild(title)
+
+        // Achievement name
+        let name = SKLabelNode(fontNamed: UIConfig.fontName)
+        name.text = achievement.name
+        name.fontSize = 16
+        name.fontColor = SKColor.white
+        name.position = CGPoint(x: 10, y: -10)
+        banner.addChild(name)
+
+        // Position at top of screen
+        banner.position = CGPoint(x: 0, y: size.height / 2 + 50)
+        gameCamera.addChild(banner)
+
+        // Animate in, stay, animate out
+        let moveIn = SKAction.moveTo(y: size.height / 2 - 60, duration: 0.4)
+        moveIn.timingMode = .easeOut
+        let wait = SKAction.wait(forDuration: 3.0)
+        let moveOut = SKAction.moveTo(y: size.height / 2 + 50, duration: 0.3)
+        moveOut.timingMode = .easeIn
+        let remove = SKAction.removeFromParent()
+
+        banner.run(SKAction.sequence([moveIn, wait, moveOut, remove]))
+
+        // Play achievement sound
+        AudioManager.shared.playSFX(.achievement, on: self)
     }
 
     // MARK: - Setup Methods
@@ -953,16 +1023,26 @@ extension GameScene: SKPhysicsContactDelegate {
               projectile.isActive, !enemy.isDead else { return }
 
         // Deal damage
-        enemy.takeDamage(projectile.damage, isCritical: projectile.isCritical)
-        GameManager.shared.recordDamageDealt(Int(projectile.damage))
+        let damageDealt = projectile.damage
+        enemy.takeDamage(damageDealt, isCritical: projectile.isCritical)
+        GameManager.shared.recordDamageDealt(Int(damageDealt))
+        totalDamageDealt += Int(damageDealt)
 
         if projectile.isCritical {
             GameManager.shared.recordCriticalHit()
+            // Screen shake for crits
+            triggerScreenShake(intensity: 4, duration: 0.1)
+            AudioManager.shared.playSFX(.critHit, on: self)
+        } else {
+            AudioManager.shared.playSFX(.enemyHit, on: self)
         }
+
+        // Check overkill achievement
+        AchievementManager.shared.checkOverkill(damageDealt: damageDealt, enemyHealth: enemy.maxHealth)
 
         // Apply life steal and update UI
         let healthBefore = player.stats.currentHealth
-        player.applyLifeSteal(from: projectile.damage)
+        player.applyLifeSteal(from: damageDealt)
         if player.stats.currentHealth > healthBefore {
             uiManager.updateHealth(current: player.stats.currentHealth, max: player.stats.maxHealth)
             // Show heal visual
@@ -987,6 +1067,43 @@ extension GameScene: SKPhysicsContactDelegate {
         healLabel.run(SKAction.sequence([
             SKAction.group([floatUp, fadeOut]),
             SKAction.removeFromParent()
+        ]))
+
+        // Haptic for heal
+        AudioManager.shared.playSFX(.heal, on: self)
+    }
+
+    // MARK: - Enhanced Screen Shake
+
+    private func triggerScreenShake(intensity: CGFloat, duration: TimeInterval = 0.2) {
+        let shakeCount = Int(duration / 0.02)
+        var shakeActions: [SKAction] = []
+
+        for i in 0..<shakeCount {
+            let decreasing = 1.0 - (CGFloat(i) / CGFloat(shakeCount))
+            let dx = CGFloat.random(in: -intensity...intensity) * decreasing
+            let dy = CGFloat.random(in: -intensity...intensity) * decreasing
+            shakeActions.append(SKAction.moveBy(x: dx, y: dy, duration: 0.02))
+        }
+
+        // Return to original position
+        shakeActions.append(SKAction.move(to: gameCamera.position, duration: 0.05))
+
+        let originalPos = gameCamera.position
+        gameCamera.run(SKAction.sequence(shakeActions)) { [weak self] in
+            self?.gameCamera.position = originalPos
+        }
+    }
+
+    private func triggerHitFreeze(duration: TimeInterval = 0.03) {
+        // Brief pause for impactful hits
+        isPaused = true
+        run(SKAction.sequence([
+            SKAction.wait(forDuration: duration),
+            SKAction.run { [weak self] in
+                guard self?.gameState == .playing else { return }
+                self?.isPaused = false
+            }
         ]))
     }
 
@@ -1039,15 +1156,22 @@ extension GameScene: PlayerDelegate {
     func playerDidTakeDamage(amount: CGFloat) {
         uiManager.updateHealth(current: player.stats.currentHealth, max: player.stats.maxHealth)
         GameManager.shared.recordDamageTaken(Int(amount))
+        damageTakenThisWave += amount
 
-        // Screen shake effect
-        let shakeAction = SKAction.sequence([
-            SKAction.moveBy(x: -3, y: 0, duration: 0.02),
-            SKAction.moveBy(x: 6, y: 0, duration: 0.02),
-            SKAction.moveBy(x: -6, y: 0, duration: 0.02),
-            SKAction.moveBy(x: 3, y: 0, duration: 0.02)
-        ])
-        gameLayer.run(shakeAction)
+        // Enhanced screen shake based on damage
+        let intensity = min(amount / 10, 8)
+        triggerScreenShake(intensity: intensity, duration: 0.15)
+
+        // Hit freeze for big hits
+        if amount >= 20 {
+            triggerHitFreeze(duration: 0.04)
+        }
+
+        // Check close call achievement
+        AchievementManager.shared.checkCloseCall(currentHealth: player.stats.currentHealth)
+
+        // Haptic feedback
+        AudioManager.shared.playSFX(.playerHit, on: self)
     }
 
     func playerDidDie() {
@@ -1095,13 +1219,24 @@ extension GameScene: WaveManagerDelegate {
 
     func waveDidStart(wave: Int, data: WaveData) {
         uiManager.updateWave(wave)
+        waveStartTime = gameTime
+        damageTakenThisWave = 0
 
         // Show wave start notification
         showWaveNotification(wave: wave, modifiers: data.modifiers, isBoss: data.isBossWave)
+
+        // Audio
+        AudioManager.shared.playSFX(.waveStart, on: self)
     }
 
     func waveDidEnd(wave: Int, data: WaveData) {
         GameManager.shared.recordWaveCompleted()
+
+        // Check achievements
+        AchievementManager.shared.checkWaveAchievements(wave: wave)
+        AchievementManager.shared.checkUntouchableWave(damageTakenThisWave: damageTakenThisWave)
+        AchievementManager.shared.checkSurvivalAchievements(surviveTime: gameTime)
+        AchievementManager.shared.checkDamageAchievements(totalDamage: totalDamageDealt)
     }
 
     func shouldSpawnEnemy(type: EnemyType, isElite: Bool, isBoss: Bool) -> Enemy? {
@@ -1188,6 +1323,15 @@ extension GameScene: EnemyDelegate {
         uiManager.updateKillCount(killCount)
         GameManager.shared.recordKill()
 
+        // Track boss kills
+        if enemy.isBoss {
+            bossKillCount += 1
+            AchievementManager.shared.checkBossSlayer(bossKillCount: bossKillCount)
+            // Big screen shake for boss kills
+            triggerScreenShake(intensity: 12, duration: 0.3)
+            triggerHitFreeze(duration: 0.1)
+        }
+
         // Grant XP to player
         let xpMultiplier = GameManager.shared.getXPMultiplier()
         let xp = Int(CGFloat(enemy.xpValue) * xpMultiplier)
@@ -1199,11 +1343,65 @@ extension GameScene: EnemyDelegate {
 
         // Notify wave manager
         waveManager.enemyWasKilled()
+
+        // Check achievements
+        AchievementManager.shared.checkKillAchievements(killCount: killCount)
+        AchievementManager.shared.checkSpeedrunner(killCount: killCount, timeElapsed: gameTime - waveStartTime)
+
+        // Audio
+        AudioManager.shared.playSFX(.enemyDie, on: self)
     }
 
     func enemyDidShoot(_ enemy: Enemy, projectile: Projectile) {
+        // Check if this is a buff signal from a buffer enemy
+        if projectile.name == "buff_signal" {
+            applyBuffToNearbyEnemies(from: enemy)
+            return
+        }
+
         gameLayer.addChild(projectile)
         projectiles.append(projectile)
+    }
+
+    private func applyBuffToNearbyEnemies(from buffer: Enemy) {
+        let buffRadius = EnemyConfig.Buffer.buffRadius
+        let damageMultiplier = 1.0 + EnemyConfig.Buffer.damageBuffPercent
+        let speedMultiplier = 1.0 + EnemyConfig.Buffer.speedBuffPercent
+
+        for enemy in enemies {
+            guard enemy !== buffer && !enemy.isDead else { continue }
+
+            let dx = enemy.position.x - buffer.position.x
+            let dy = enemy.position.y - buffer.position.y
+            let distance = sqrt(dx * dx + dy * dy)
+
+            if distance <= buffRadius {
+                enemy.applyBuff(damageMultiplier: damageMultiplier, speedMultiplier: speedMultiplier)
+
+                // Visual buff beam effect
+                showBuffBeam(from: buffer.position, to: enemy.position)
+            }
+        }
+
+        AudioManager.shared.playSFX(.buffApply, on: self)
+    }
+
+    private func showBuffBeam(from start: CGPoint, to end: CGPoint) {
+        let path = CGMutablePath()
+        path.move(to: start)
+        path.addLine(to: end)
+
+        let beam = SKShapeNode(path: path)
+        beam.strokeColor = SKColor(red: 0.8, green: 0.6, blue: 1.0, alpha: 0.8)
+        beam.lineWidth = 3
+        beam.glowWidth = 5
+        beam.zPosition = GameConfig.ZPosition.effects
+        gameLayer.addChild(beam)
+
+        beam.run(SKAction.sequence([
+            SKAction.fadeOut(withDuration: 0.3),
+            SKAction.removeFromParent()
+        ]))
     }
 
     func enemyDidDamagePlayer(_ enemy: Enemy, damage: CGFloat) {

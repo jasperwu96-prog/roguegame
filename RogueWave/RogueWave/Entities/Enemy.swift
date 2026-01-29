@@ -1265,38 +1265,16 @@ class Enemy: SKNode {
     }
 
     private func showHitFeedback(isCritical: Bool) {
-        let flashColor = isCritical ? SKColor.yellow : SKColor.white
-        let originalColor = spriteNode.fillColor
-
-        let flashAction = SKAction.sequence([
-            SKAction.run { [weak self] in self?.spriteNode.fillColor = flashColor },
-            SKAction.wait(forDuration: 0.05),
-            SKAction.run { [weak self] in self?.spriteNode.fillColor = originalColor }
-        ])
-        run(flashAction)
-
-        // Knockback effect
-        if let target = target {
-            let direction = directionTo(target)
-            let knockback = SKAction.moveBy(x: direction.x * -10, y: direction.y * -10, duration: 0.05)
-            run(knockback)
-        }
+        // SIMPLIFIED: Just a brief alpha flash, no color change or knockback actions
+        // This reduces action count during rapid attacks on bosses
+        alpha = 0.6
+        run(SKAction.fadeAlpha(to: 1.0, duration: 0.1))
     }
 
     private func showDamageNumber(_ amount: CGFloat, isCritical: Bool) {
-        let label = SKLabelNode(fontNamed: UIConfig.fontName)
-        label.text = isCritical ? "\(Int(amount))!" : "\(Int(amount))"
-        label.fontSize = isCritical ? 18 : 14
-        label.fontColor = isCritical ? SKColor.yellow : SKColor.white
-        label.position = CGPoint(x: 0, y: 30)
-        label.zPosition = GameConfig.ZPosition.effects
-        addChild(label)
-
-        let floatUp = SKAction.moveBy(x: CGFloat.random(in: -20...20), y: 40, duration: 0.8)
-        let fadeOut = SKAction.fadeOut(withDuration: 0.8)
-        let remove = SKAction.removeFromParent()
-
-        label.run(SKAction.sequence([SKAction.group([floatUp, fadeOut]), remove]))
+        // DISABLED: Damage numbers create too many nodes and actions during boss fights
+        // Each hit was creating a label + 2 actions, which accumulated rapidly
+        return
     }
 
     private func die() {

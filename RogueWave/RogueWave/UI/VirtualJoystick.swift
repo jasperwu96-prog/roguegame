@@ -266,16 +266,6 @@ class JoystickTouchZone: SKNode {
         self.touchZoneRect = rect
         self.joystick = joystick
         isUserInteractionEnabled = true
-
-        // Visual debug zone (optional)
-        #if DEBUG
-        let debugZone = SKShapeNode(rect: rect)
-        debugZone.fillColor = SKColor.blue.withAlphaComponent(0.1)
-        debugZone.strokeColor = SKColor.blue.withAlphaComponent(0.3)
-        debugZone.lineWidth = 1
-        debugZone.zPosition = -1
-        addChild(debugZone)
-        #endif
     }
 
     required init?(coder aDecoder: NSCoder) {

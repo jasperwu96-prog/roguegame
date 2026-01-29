@@ -1485,6 +1485,11 @@ extension GameScene: UIManagerDelegate {
         player.applyUpgrade(upgrade)
         GameManager.shared.recordUpgradeCollected()
 
+        // Update health bar if max health changed
+        if upgrade.type == .maxHealth {
+            uiManager.updateHealth(current: player.stats.currentHealth, max: player.stats.maxHealth)
+        }
+
         // Add ability button if needed
         if upgrade.type.isActive {
             uiManager.addAbilityButton(for: upgrade.type)

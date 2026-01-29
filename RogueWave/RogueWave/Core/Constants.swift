@@ -43,78 +43,78 @@ enum GameConfig {
 // MARK: - Player Configuration
 
 enum PlayerConfig {
-    // Base stats
-    static let baseHealth: CGFloat = 100
-    static let baseSpeed: CGFloat = 200
-    static let baseDamage: CGFloat = 10
-    static let baseAttackSpeed: CGFloat = 1.0  // attacks per second
-    static let baseAttackRange: CGFloat = 400  // Increased for open world
-    static let baseProjectileSpeed: CGFloat = 500  // Faster projectiles
-    static let baseCritChance: CGFloat = 0.05
-    static let baseCritMultiplier: CGFloat = 2.0
+    // Base stats - BUFFED for exciting gameplay!
+    static let baseHealth: CGFloat = 200  // More survivability
+    static let baseSpeed: CGFloat = 280  // Faster movement
+    static let baseDamage: CGFloat = 25  // Hits harder
+    static let baseAttackSpeed: CGFloat = 3.0  // 3 attacks per second - rapid fire!
+    static let baseAttackRange: CGFloat = 600  // Long range
+    static let baseProjectileSpeed: CGFloat = 700  // Fast projectiles
+    static let baseCritChance: CGFloat = 0.15  // More crits
+    static let baseCritMultiplier: CGFloat = 2.5  // Bigger crits
 
     // Visual
     static let size: CGFloat = 40
     static let color: SKColor = SKColor(red: 0.3, green: 0.7, blue: 1.0, alpha: 1.0)
     static let hitFlashDuration: TimeInterval = 0.1
-    static let invincibilityDuration: TimeInterval = 0.5
+    static let invincibilityDuration: TimeInterval = 0.8  // Longer invincibility
 
-    // Experience
-    static let baseXPToLevel: Int = 100
-    static let xpScalingFactor: CGFloat = 1.5
+    // Experience - faster leveling for more upgrades
+    static let baseXPToLevel: Int = 50
+    static let xpScalingFactor: CGFloat = 1.3
 }
 
 // MARK: - Enemy Configuration
 
 enum EnemyConfig {
-    // Spawn settings
+    // Spawn settings - Fast action!
     static let spawnPadding: CGFloat = 30  // Distance outside spawn bounds
-    static let maxEnemiesOnScreen: Int = 50
-    static let spawnInterval: TimeInterval = 0.3  // Faster spawning
+    static let maxEnemiesOnScreen: Int = 80  // More enemies on screen
+    static let spawnInterval: TimeInterval = 0.15  // Very fast spawning
 
     // Base scaling per wave
     static let healthScalingPerWave: CGFloat = 1.15
     static let damageScalingPerWave: CGFloat = 1.1
     static let speedScalingPerWave: CGFloat = 1.02
 
-    // Enemy type configurations - speeds increased for open world
+    // Enemy type configurations - fast enemies, good XP
     enum Chaser {
-        static let baseHealth: CGFloat = 20
-        static let baseSpeed: CGFloat = 180  // Faster to reach player quickly
-        static let baseDamage: CGFloat = 10
+        static let baseHealth: CGFloat = 15  // Easier to kill
+        static let baseSpeed: CGFloat = 200  // Fast chasers
+        static let baseDamage: CGFloat = 8
         static let size: CGFloat = 30
         static let color: SKColor = SKColor(red: 0.9, green: 0.3, blue: 0.3, alpha: 1.0)
-        static let xpValue: Int = 10
+        static let xpValue: Int = 15  // More XP
     }
 
     enum Swarm {
-        static let baseHealth: CGFloat = 10
-        static let baseSpeed: CGFloat = 220  // Very fast swarm
-        static let baseDamage: CGFloat = 5
+        static let baseHealth: CGFloat = 8  // Very fragile
+        static let baseSpeed: CGFloat = 250  // Very fast swarm
+        static let baseDamage: CGFloat = 4
         static let size: CGFloat = 20
         static let color: SKColor = SKColor(red: 0.9, green: 0.6, blue: 0.2, alpha: 1.0)
-        static let xpValue: Int = 5
+        static let xpValue: Int = 8  // More XP
     }
 
     enum Ranged {
-        static let baseHealth: CGFloat = 15
-        static let baseSpeed: CGFloat = 100  // Ranged stays back
-        static let baseDamage: CGFloat = 15
+        static let baseHealth: CGFloat = 12
+        static let baseSpeed: CGFloat = 120
+        static let baseDamage: CGFloat = 12
         static let size: CGFloat = 28
         static let color: SKColor = SKColor(red: 0.6, green: 0.3, blue: 0.9, alpha: 1.0)
         static let attackRange: CGFloat = 350
         static let projectileSpeed: CGFloat = 350
         static let attackCooldown: TimeInterval = 1.5
-        static let xpValue: Int = 15
+        static let xpValue: Int = 20  // More XP
     }
 
     enum Tank {
-        static let baseHealth: CGFloat = 80
-        static let baseSpeed: CGFloat = 90  // Slow but not too slow
-        static let baseDamage: CGFloat = 25
+        static let baseHealth: CGFloat = 60  // Slightly easier
+        static let baseSpeed: CGFloat = 100
+        static let baseDamage: CGFloat = 20
         static let size: CGFloat = 50
         static let color: SKColor = SKColor(red: 0.4, green: 0.4, blue: 0.5, alpha: 1.0)
-        static let xpValue: Int = 30
+        static let xpValue: Int = 40  // More XP
     }
 
     enum Elite {
@@ -150,10 +150,10 @@ enum WaveConfig {
     // Wave modifiers
     static let modifierChance: CGFloat = 0.3
 
-    // First 3 waves spawn configuration
-    static let wave1Enemies: [(EnemyType, Int)] = [(.chaser, 5)]
-    static let wave2Enemies: [(EnemyType, Int)] = [(.chaser, 6), (.swarm, 4)]
-    static let wave3Enemies: [(EnemyType, Int)] = [(.chaser, 5), (.swarm, 6), (.ranged, 2)]
+    // First 3 waves spawn configuration - ACTION PACKED!
+    static let wave1Enemies: [(EnemyType, Int)] = [(.chaser, 12), (.swarm, 8)]  // Lots of enemies from start!
+    static let wave2Enemies: [(EnemyType, Int)] = [(.chaser, 15), (.swarm, 12), (.ranged, 3)]
+    static let wave3Enemies: [(EnemyType, Int)] = [(.chaser, 12), (.swarm, 15), (.ranged, 5), (.tank, 2)]
 }
 
 // MARK: - Upgrade Configuration

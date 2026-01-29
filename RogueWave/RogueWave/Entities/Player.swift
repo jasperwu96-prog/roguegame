@@ -19,10 +19,10 @@ struct PlayerStats {
     var projectileSpeed: CGFloat = PlayerConfig.baseProjectileSpeed
     var critChance: CGFloat = PlayerConfig.baseCritChance
     var critMultiplier: CGFloat = PlayerConfig.baseCritMultiplier
-    var armor: CGFloat = 0
-    var lifeSteal: CGFloat = 0
-    var projectileCount: Int = 1
-    var hasPiercing: Bool = false
+    var armor: CGFloat = 5  // Start with some armor
+    var lifeSteal: CGFloat = 0.02  // Start with small life steal
+    var projectileCount: Int = 3  // Start with triple shot!
+    var hasPiercing: Bool = true  // Projectiles pierce through enemies!
     var hasHoming: Bool = false
 
     // Experience
@@ -40,10 +40,10 @@ struct PlayerStats {
         projectileSpeed = PlayerConfig.baseProjectileSpeed
         critChance = PlayerConfig.baseCritChance
         critMultiplier = PlayerConfig.baseCritMultiplier
-        armor = 0
-        lifeSteal = 0
-        projectileCount = 1
-        hasPiercing = false
+        armor = 5  // Start with some armor
+        lifeSteal = 0.02  // Start with small life steal
+        projectileCount = 3  // Start with triple shot!
+        hasPiercing = true  // Projectiles pierce through enemies!
         hasHoming = false
         level = 1
         currentXP = 0
@@ -399,31 +399,41 @@ class Player: SKNode {
 
     // MARK: - Combat
 
-    private func autoAttack(deltaTime: TimeInterval, enemies: [Enemy]) {
-        guard !enemies.isEmpty else { return }
+    // Track last attack direction for continuous shooting
+    private var lastAttackAngle: CGFloat = .pi / 2  // Default: shoot upward
 
+    private func autoAttack(deltaTime: TimeInterval, enemies: [Enemy]) {
         lastAttackTime += deltaTime
         let attackInterval = 1.0 / stats.attackSpeed
 
         guard lastAttackTime >= attackInterval else { return }
 
-        // Find nearest enemy (regardless of range - always shoot toward threats)
-        let nearestEnemy = findNearestEnemy(enemies: enemies)
-        guard let target = nearestEnemy else { return }
-
-        currentTarget = target
-        lastAttackTime = 0
-
-        // Fire projectile(s)
-        fireProjectiles(at: target)
+        // Try to find a live enemy first, then any enemy, then use last direction
+        if let target = findNearestEnemy(enemies: enemies, includeDead: false) {
+            // Found a live enemy - shoot at it
+            currentTarget = target
+            lastAttackAngle = angleTo(target)
+            lastAttackTime = 0
+            fireProjectilesAtAngle(lastAttackAngle)
+        } else if let target = findNearestEnemy(enemies: enemies, includeDead: true) {
+            // Only dead enemies - shoot toward where they are
+            lastAttackAngle = angleTo(target)
+            lastAttackTime = 0
+            fireProjectilesAtAngle(lastAttackAngle)
+        } else if !enemies.isEmpty {
+            // Enemies exist but can't find any - shoot in last known direction
+            lastAttackTime = 0
+            fireProjectilesAtAngle(lastAttackAngle)
+        }
+        // If no enemies at all, don't shoot (wave transition)
     }
 
-    private func findNearestEnemy(enemies: [Enemy]) -> Enemy? {
+    private func findNearestEnemy(enemies: [Enemy], includeDead: Bool) -> Enemy? {
         var nearestEnemy: Enemy?
         var nearestDistance: CGFloat = .greatestFiniteMagnitude
 
         for enemy in enemies {
-            guard !enemy.isDead else { continue }
+            if !includeDead && enemy.isDead { continue }
             let distance = distanceTo(enemy)
             if distance < nearestDistance {
                 nearestDistance = distance
@@ -442,7 +452,10 @@ class Player: SKNode {
 
     private func fireProjectiles(at target: Enemy) {
         let baseAngle = angleTo(target)
+        fireProjectilesAtAngle(baseAngle)
+    }
 
+    private func fireProjectilesAtAngle(_ baseAngle: CGFloat) {
         // Calculate spread for multiple projectiles
         let spreadAngle: CGFloat = stats.projectileCount > 1 ? .pi / 12 : 0
         let startAngle = baseAngle - spreadAngle * CGFloat(stats.projectileCount - 1) / 2

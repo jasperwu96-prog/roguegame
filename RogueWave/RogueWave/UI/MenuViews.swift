@@ -157,35 +157,51 @@ class AchievementsView: SubMenuView {
 
         let content = createScrollableContent()
 
+        // Progress header
         let progress = AchievementManager.shared.getProgress()
         let progressLabel = SKLabelNode(fontNamed: UIConfig.fontName)
         progressLabel.text = "\(progress.unlocked) / \(progress.total) Unlocked"
-        progressLabel.fontSize = 14
-        progressLabel.fontColor = SKColor(white: 0.6, alpha: 1.0)
-        progressLabel.position = CGPoint(x: 0, y: 200)
+        progressLabel.fontSize = 16
+        progressLabel.fontColor = SKColor(red: 0.3, green: 0.7, blue: 1.0, alpha: 1.0)
+        progressLabel.position = CGPoint(x: 0, y: 180)
         content.addChild(progressLabel)
 
-        // Display achievements in a grid
-        let achievements = AchievementManager.shared.getAllAchievements()
-        let columns = 2
-        let itemWidth: CGFloat = 140
-        let itemHeight: CGFloat = 60
-        let spacing: CGFloat = 10
+        // Progress bar
+        let barWidth: CGFloat = 200
+        let barBg = SKShapeNode(rectOf: CGSize(width: barWidth, height: 8), cornerRadius: 4)
+        barBg.fillColor = SKColor(white: 0.15, alpha: 1.0)
+        barBg.strokeColor = .clear
+        barBg.position = CGPoint(x: 0, y: 155)
+        content.addChild(barBg)
 
-        for (index, achievement) in achievements.enumerated() {
+        let progressRatio = progress.total > 0 ? CGFloat(progress.unlocked) / CGFloat(progress.total) : 0
+        let fillWidth = max(barWidth * progressRatio, 8)
+        let barFill = SKShapeNode(rectOf: CGSize(width: fillWidth, height: 6), cornerRadius: 3)
+        barFill.fillColor = SKColor(red: 0.3, green: 0.7, blue: 0.3, alpha: 1.0)
+        barFill.strokeColor = .clear
+        barFill.position = CGPoint(x: (fillWidth - barWidth) / 2, y: 155)
+        content.addChild(barFill)
+
+        // Display achievements in a single column list for better readability
+        let achievements = AchievementManager.shared.getAllAchievements()
+        let itemWidth: CGFloat = 280
+        let itemHeight: CGFloat = 70
+        let spacing: CGFloat = 12
+        let startY: CGFloat = 110
+
+        var visibleIndex = 0
+        for achievement in achievements {
             // Skip hidden locked achievements
             if achievement.isHidden && !achievement.isUnlocked {
                 continue
             }
 
-            let col = index % columns
-            let row = index / columns
-            let x = CGFloat(col) * (itemWidth + spacing) - (itemWidth + spacing) / 2
-            let y = 150 - CGFloat(row) * (itemHeight + spacing)
-
+            let y = startY - CGFloat(visibleIndex) * (itemHeight + spacing)
             let card = createAchievementCard(achievement, width: itemWidth, height: itemHeight)
-            card.position = CGPoint(x: x, y: y)
+            card.position = CGPoint(x: 0, y: y)
             content.addChild(card)
+
+            visibleIndex += 1
         }
     }
 
@@ -196,39 +212,65 @@ class AchievementsView: SubMenuView {
     private func createAchievementCard(_ achievement: Achievement, width: CGFloat, height: CGFloat) -> SKNode {
         let card = SKNode()
 
-        let bg = SKShapeNode(rectOf: CGSize(width: width, height: height), cornerRadius: 8)
+        // Background
+        let bg = SKShapeNode(rectOf: CGSize(width: width, height: height), cornerRadius: 10)
         bg.fillColor = achievement.isUnlocked ?
-            SKColor(red: 0.15, green: 0.25, blue: 0.15, alpha: 1.0) :
+            SKColor(red: 0.12, green: 0.22, blue: 0.12, alpha: 1.0) :
             SKColor(red: 0.1, green: 0.1, blue: 0.12, alpha: 1.0)
         bg.strokeColor = achievement.isUnlocked ?
             SKColor(red: 0.3, green: 0.6, blue: 0.3, alpha: 1.0) :
             SKColor(red: 0.2, green: 0.2, blue: 0.25, alpha: 1.0)
-        bg.lineWidth = 1
+        bg.lineWidth = achievement.isUnlocked ? 2 : 1
+        if achievement.isUnlocked {
+            bg.glowWidth = 2
+        }
         card.addChild(bg)
 
-        // Trophy icon
+        // Icon circle background
+        let iconBg = SKShapeNode(circleOfRadius: 22)
+        iconBg.fillColor = achievement.isUnlocked ?
+            SKColor(red: 0.25, green: 0.4, blue: 0.25, alpha: 1.0) :
+            SKColor(white: 0.15, alpha: 1.0)
+        iconBg.strokeColor = achievement.isUnlocked ?
+            SKColor(red: 0.4, green: 0.6, blue: 0.4, alpha: 1.0) :
+            SKColor(white: 0.25, alpha: 1.0)
+        iconBg.lineWidth = 1
+        iconBg.position = CGPoint(x: -width / 2 + 35, y: 0)
+        card.addChild(iconBg)
+
+        // Trophy/Lock icon
         let icon = SKLabelNode(fontNamed: UIConfig.fontName)
         icon.text = achievement.isUnlocked ? "🏆" : "🔒"
-        icon.fontSize = 20
-        icon.position = CGPoint(x: -width / 2 + 20, y: -5)
+        icon.fontSize = 22
+        icon.verticalAlignmentMode = .center
+        icon.horizontalAlignmentMode = .center
+        icon.position = CGPoint(x: -width / 2 + 35, y: 0)
         card.addChild(icon)
+
+        // Text content area starts after the icon
+        let textStartX: CGFloat = -width / 2 + 70
+        let textWidth: CGFloat = width - 90
 
         // Name
         let name = SKLabelNode(fontNamed: UIConfig.fontName)
         name.text = achievement.isUnlocked ? achievement.name : "???"
-        name.fontSize = 11
+        name.fontSize = 14
         name.fontColor = achievement.isUnlocked ? .white : SKColor(white: 0.5, alpha: 1.0)
         name.horizontalAlignmentMode = .left
-        name.position = CGPoint(x: -width / 2 + 40, y: 8)
+        name.verticalAlignmentMode = .center
+        name.position = CGPoint(x: textStartX, y: 12)
         card.addChild(name)
 
         // Description
         let desc = SKLabelNode(fontNamed: UIConfig.fontName)
-        desc.text = achievement.isUnlocked ? achievement.description : "Hidden"
-        desc.fontSize = 9
-        desc.fontColor = SKColor(white: 0.5, alpha: 1.0)
+        desc.text = achievement.isUnlocked ? achievement.description : "Complete hidden requirement"
+        desc.fontSize = 11
+        desc.fontColor = SKColor(white: 0.55, alpha: 1.0)
         desc.horizontalAlignmentMode = .left
-        desc.position = CGPoint(x: -width / 2 + 40, y: -8)
+        desc.verticalAlignmentMode = .center
+        desc.preferredMaxLayoutWidth = textWidth
+        desc.numberOfLines = 2
+        desc.position = CGPoint(x: textStartX, y: -10)
         card.addChild(desc)
 
         return card
@@ -287,10 +329,12 @@ class CharacterSelectView: SubMenuView {
     private let cardWidth: CGFloat = 130
     private let cardHeight: CGFloat = 180
     private let spacing: CGFloat = 15
-    private var scrollOffset: CGFloat = 0
-    private var lastTouchX: CGFloat = 0
-    private var isDragging: Bool = false
     private var cardsContainer: SKNode?
+
+    // Scroll tracking
+    private var lastDragX: CGFloat = 0
+    private var velocity: CGFloat = 0
+    private var isDecelerating: Bool = false
 
     init(size: CGSize, selectedClass: CharacterClass, onSelect: @escaping (CharacterClass) -> Void) {
         self.selectedClass = selectedClass
@@ -307,42 +351,17 @@ class CharacterSelectView: SubMenuView {
 
         rebuildCards(in: container)
 
-        // Add scroll hint arrows
-        addScrollHints(to: content)
+        // Add hint
+        let hint = SKLabelNode(fontNamed: UIConfig.fontName)
+        hint.text = "← Swipe to browse →"
+        hint.fontSize = 12
+        hint.fontColor = SKColor(white: 0.5, alpha: 1.0)
+        hint.position = CGPoint(x: 0, y: -cardHeight / 2 - 40)
+        content.addChild(hint)
     }
 
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
-    }
-
-    private func addScrollHints(to content: SKNode) {
-        let arrowColor = SKColor(white: 0.5, alpha: 0.8)
-
-        // Left arrow
-        let leftArrow = SKLabelNode(fontNamed: UIConfig.fontName)
-        leftArrow.text = "◀"
-        leftArrow.fontSize = 24
-        leftArrow.fontColor = arrowColor
-        leftArrow.position = CGPoint(x: -viewSize.width / 2 + 50, y: 0)
-        leftArrow.name = "leftArrow"
-        content.addChild(leftArrow)
-
-        // Right arrow
-        let rightArrow = SKLabelNode(fontNamed: UIConfig.fontName)
-        rightArrow.text = "▶"
-        rightArrow.fontSize = 24
-        rightArrow.fontColor = arrowColor
-        rightArrow.position = CGPoint(x: viewSize.width / 2 - 50, y: 0)
-        rightArrow.name = "rightArrow"
-        content.addChild(rightArrow)
-
-        // Swipe hint
-        let hint = SKLabelNode(fontNamed: UIConfig.fontName)
-        hint.text = "Swipe to see more"
-        hint.fontSize = 12
-        hint.fontColor = SKColor(white: 0.5, alpha: 1.0)
-        hint.position = CGPoint(x: 0, y: -cardHeight / 2 - 30)
-        content.addChild(hint)
     }
 
     private func rebuildCards(in container: SKNode) {
@@ -366,22 +385,6 @@ class CharacterSelectView: SubMenuView {
         guard let content = contentNode, let container = cardsContainer else { return false }
 
         let contentLocation = content.convert(location, from: self)
-
-        // Check arrow buttons for navigation
-        if let leftArrow = content.childNode(withName: "leftArrow") {
-            if leftArrow.frame.contains(contentLocation) {
-                scrollBy(amount: cardWidth + spacing)
-                return true
-            }
-        }
-
-        if let rightArrow = content.childNode(withName: "rightArrow") {
-            if rightArrow.frame.contains(contentLocation) {
-                scrollBy(amount: -(cardWidth + spacing))
-                return true
-            }
-        }
-
         let containerLocation = container.convert(contentLocation, from: content)
 
         // Check each character card
@@ -405,26 +408,82 @@ class CharacterSelectView: SubMenuView {
         return false
     }
 
-    func handleDrag(from startLocation: CGPoint, to currentLocation: CGPoint) {
-        guard let container = cardsContainer else { return }
-
-        let deltaX = currentLocation.x - startLocation.x
-        scrollBy(amount: deltaX * 0.1)  // Dampen the scroll
+    func handleDragBegan(at location: CGPoint) {
+        isDecelerating = false
+        cardsContainer?.removeAction(forKey: "decelerate")
+        lastDragX = location.x
+        velocity = 0
     }
 
-    private func scrollBy(amount: CGFloat) {
+    func handleDragMoved(to location: CGPoint) {
+        guard let container = cardsContainer else { return }
+
+        let deltaX = location.x - lastDragX
+        velocity = deltaX  // Track velocity for momentum
+        lastDragX = location.x
+
+        // Move container directly
+        let totalWidth = CGFloat(CharacterClass.allCases.count) * (cardWidth + spacing) - spacing
+        let minX = -totalWidth / 2 + cardWidth / 2
+        let maxX = totalWidth / 2 - cardWidth / 2
+
+        var newX = container.position.x + deltaX
+
+        // Add rubber band effect at edges
+        if newX > maxX {
+            let overscroll = newX - maxX
+            newX = maxX + overscroll * 0.3
+        } else if newX < minX {
+            let overscroll = minX - newX
+            newX = minX - overscroll * 0.3
+        }
+
+        container.position.x = newX
+    }
+
+    func handleDragEnded() {
         guard let container = cardsContainer else { return }
 
         let totalWidth = CGFloat(CharacterClass.allCases.count) * (cardWidth + spacing) - spacing
         let minX = -totalWidth / 2 + cardWidth / 2
         let maxX = totalWidth / 2 - cardWidth / 2
 
-        var newX = container.position.x + amount
-        newX = max(minX - 50, min(maxX + 50, newX))  // Allow some overscroll
+        // Apply momentum scrolling
+        isDecelerating = true
+        applyMomentum(velocity: velocity, minX: minX, maxX: maxX)
+    }
 
-        let moveAction = SKAction.moveTo(x: newX, duration: 0.2)
-        moveAction.timingMode = .easeOut
-        container.run(moveAction)
+    private func applyMomentum(velocity: CGFloat, minX: CGFloat, maxX: CGFloat) {
+        guard let container = cardsContainer, isDecelerating else { return }
+
+        let friction: CGFloat = 0.95
+        var currentVelocity = velocity
+
+        let decelerateAction = SKAction.customAction(withDuration: 2.0) { [weak self] node, elapsed in
+            guard let self = self, self.isDecelerating else { return }
+
+            currentVelocity *= friction
+
+            var newX = container.position.x + currentVelocity
+
+            // Bounce back from edges
+            if newX > maxX {
+                newX = maxX
+                self.isDecelerating = false
+            } else if newX < minX {
+                newX = minX
+                self.isDecelerating = false
+            }
+
+            container.position.x = newX
+
+            // Stop when velocity is very low
+            if abs(currentVelocity) < 0.5 {
+                self.isDecelerating = false
+            }
+        }
+
+        container.run(decelerateAction, withKey: "decelerate")
     }
 
     private func createCharacterCard(_ charClass: CharacterClass, width: CGFloat, height: CGFloat, isSelected: Bool) -> SKNode {

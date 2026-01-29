@@ -13,6 +13,7 @@ class MainMenuScene: SKScene {
 
     private var backgroundLayer: SKNode!
     private var menuContainer: SKNode!
+    private var titleContainer: SKNode!
     private var currentSubMenu: SKNode?
 
     // Buttons
@@ -84,13 +85,17 @@ class MainMenuScene: SKScene {
     }
 
     private func setupTitle() {
+        // Container for title elements (will be hidden with menu)
+        titleContainer = SKNode()
+        addChild(titleContainer)
+
         // Game title
         let title = SKLabelNode(fontNamed: UIConfig.fontName)
         title.text = "ROGUE WAVE"
         title.fontSize = 48
         title.fontColor = SKColor(red: 0.3, green: 0.7, blue: 1.0, alpha: 1.0)
         title.position = CGPoint(x: size.width / 2, y: size.height - 100)
-        addChild(title)
+        titleContainer.addChild(title)
 
         // Glow effect
         let glow = SKLabelNode(fontNamed: UIConfig.fontName)
@@ -99,7 +104,7 @@ class MainMenuScene: SKScene {
         glow.fontColor = SKColor(red: 0.3, green: 0.7, blue: 1.0, alpha: 0.3)
         glow.position = CGPoint(x: size.width / 2, y: size.height - 100)
         glow.setScale(1.05)
-        addChild(glow)
+        titleContainer.addChild(glow)
 
         // Pulse animation
         let pulse = SKAction.repeatForever(SKAction.sequence([
@@ -114,7 +119,7 @@ class MainMenuScene: SKScene {
         subtitle.fontSize = 16
         subtitle.fontColor = SKColor(white: 0.7, alpha: 1.0)
         subtitle.position = CGPoint(x: size.width / 2, y: size.height - 140)
-        addChild(subtitle)
+        titleContainer.addChild(subtitle)
     }
 
     private func setupMenuButtons() {
@@ -225,15 +230,15 @@ class MainMenuScene: SKScene {
     // MARK: - Touch Handling
 
     private var touchStartLocation: CGPoint?
-    private var lastTouchLocation: CGPoint?
+    private var isDragging: Bool = false
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = touches.first else { return }
         let location = touch.location(in: self)
         touchStartLocation = location
-        lastTouchLocation = location
+        isDragging = false
 
-        // If submenu is open, check close button only (tap handling done on touchesEnded)
+        // If submenu is open, check close button and start drag tracking
         if let submenu = currentSubMenu as? SubMenuView {
             let submenuLocation = touch.location(in: submenu)
 
@@ -244,6 +249,11 @@ class MainMenuScene: SKScene {
                     AudioManager.shared.playSFX(.buttonPress, on: self)
                     return
                 }
+            }
+
+            // Start drag tracking for character select
+            if let charSelect = submenu as? CharacterSelectView {
+                charSelect.handleDragBegan(at: submenuLocation)
             }
             return
         }
@@ -256,37 +266,40 @@ class MainMenuScene: SKScene {
         guard let touch = touches.first else { return }
         let location = touch.location(in: self)
 
-        // Handle scrolling in character select view
-        if let charSelect = currentSubMenu as? CharacterSelectView,
-           let lastLocation = lastTouchLocation {
-            let submenuLocation = touch.location(in: charSelect)
-            let lastSubmenuLocation = convert(lastLocation, to: charSelect)
-            charSelect.handleDrag(from: lastSubmenuLocation, to: submenuLocation)
+        // Check if we've moved enough to be considered dragging
+        if let startLocation = touchStartLocation {
+            let distance = hypot(location.x - startLocation.x, location.y - startLocation.y)
+            if distance > 10 {
+                isDragging = true
+            }
         }
 
-        lastTouchLocation = location
+        // Handle scrolling in character select view
+        if let charSelect = currentSubMenu as? CharacterSelectView {
+            let submenuLocation = touch.location(in: charSelect)
+            charSelect.handleDragMoved(to: submenuLocation)
+        }
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = touches.first else { return }
         let location = touch.location(in: self)
 
-        // Check if this was a tap (not a drag)
-        if let startLocation = touchStartLocation {
-            let distance = hypot(location.x - startLocation.x, location.y - startLocation.y)
-            let wasTap = distance < 20  // Threshold for tap vs drag
+        // Handle character select drag end
+        if let charSelect = currentSubMenu as? CharacterSelectView {
+            charSelect.handleDragEnded()
+        }
 
-            // Handle tap on submenu elements
-            if wasTap, let submenu = currentSubMenu as? SubMenuView {
-                let submenuLocation = touch.location(in: submenu)
-                if submenu.handleTouch(at: submenuLocation) {
-                    AudioManager.shared.playSFX(.buttonPress, on: self)
-                }
+        // Check if this was a tap (not a drag)
+        if !isDragging, let submenu = currentSubMenu as? SubMenuView {
+            let submenuLocation = touch.location(in: submenu)
+            if submenu.handleTouch(at: submenuLocation) {
+                AudioManager.shared.playSFX(.buttonPress, on: self)
             }
         }
 
         touchStartLocation = nil
-        lastTouchLocation = nil
+        isDragging = false
     }
 
     private func handleButtonTouch(at location: CGPoint) {
@@ -349,8 +362,9 @@ class MainMenuScene: SKScene {
         // Close existing submenu
         currentSubMenu?.removeFromParent()
 
-        // Hide main menu completely
+        // Hide entire main menu including title
         menuContainer.isHidden = true
+        titleContainer.isHidden = true
         backgroundLayer.isHidden = true
 
         // Add submenu
@@ -369,6 +383,7 @@ class MainMenuScene: SKScene {
 
         // Show main menu again
         menuContainer.isHidden = false
+        titleContainer.isHidden = false
         backgroundLayer.isHidden = false
         menuContainer.alpha = 1.0
     }

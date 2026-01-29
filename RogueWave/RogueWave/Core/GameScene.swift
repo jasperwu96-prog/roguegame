@@ -59,6 +59,10 @@ class GameScene: SKScene {
     // Achievement tracking
     private var waveStartTime: TimeInterval = 0
 
+    // Screen shake tracking
+    private var cameraOriginalPosition: CGPoint = .zero
+    private var isShaking: Bool = false
+
     // Chunk coordinate helper
     private struct ChunkCoord: Hashable {
         let x: Int
@@ -1074,9 +1078,6 @@ extension GameScene: SKPhysicsContactDelegate {
     }
 
     // MARK: - Enhanced Screen Shake
-
-    private var cameraOriginalPosition: CGPoint = .zero
-    private var isShaking: Bool = false
 
     private func triggerScreenShake(intensity: CGFloat, duration: TimeInterval = 0.2) {
         // Check if screen shake is enabled

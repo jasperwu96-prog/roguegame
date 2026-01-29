@@ -63,6 +63,9 @@ class GameScene: SKScene {
     private var cameraOriginalPosition: CGPoint = .zero
     private var isShaking: Bool = false
 
+    // Hit freeze tracking
+    private var hitFreezeActive: Bool = false
+
     // Heal effect throttling to prevent node accumulation during rapid hits
     private var lastHealEffectTime: TimeInterval = 0
     private let healEffectThrottle: TimeInterval = 0.3  // Only show heal effect every 300ms
@@ -1141,8 +1144,6 @@ extension GameScene: SKPhysicsContactDelegate {
 
         gameCamera.run(SKAction.sequence(shakeActions), withKey: "screenShake")
     }
-
-    private var hitFreezeActive: Bool = false
 
     private func triggerHitFreeze(duration: TimeInterval = 0.03) {
         // Prevent stacking freezes

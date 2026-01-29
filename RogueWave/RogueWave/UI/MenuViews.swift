@@ -953,112 +953,133 @@ class UpgradesView: SubMenuView {
 class ChallengesView: SubMenuView {
 
     init(size: CGSize) {
-        super.init(size: size, title: "DAILY CHALLENGES")
+        super.init(size: size, title: "CHALLENGES")
 
         let content = createScrollableContent()
 
-        // Daily challenge
-        let dailyCard = createChallengeCard(
-            title: "Daily Challenge",
-            description: "Survive 5 waves using only the Dash ability",
-            reward: "500 Gold",
-            progress: "2/5 Waves",
-            timeRemaining: "12:34:56",
-            color: SKColor(red: 0.8, green: 0.6, blue: 0.2, alpha: 1.0)
-        )
-        dailyCard.position = CGPoint(x: 0, y: 80)
-        content.addChild(dailyCard)
+        // Coming soon message
+        let comingSoon = SKLabelNode(fontNamed: UIConfig.fontName)
+        comingSoon.text = "🚧 COMING SOON 🚧"
+        comingSoon.fontSize = 20
+        comingSoon.fontColor = SKColor(red: 1.0, green: 0.8, blue: 0.3, alpha: 1.0)
+        comingSoon.position = CGPoint(x: 0, y: 120)
+        content.addChild(comingSoon)
 
-        // Weekly challenge
-        let weeklyCard = createChallengeCard(
-            title: "Weekly Challenge",
-            description: "Kill 500 enemies without taking damage in a single wave",
-            reward: "Legendary Skin",
-            progress: "312/500 Kills",
-            timeRemaining: "5d 12:34:56",
-            color: SKColor(red: 0.6, green: 0.3, blue: 0.8, alpha: 1.0)
+        let desc = SKLabelNode(fontNamed: UIConfig.fontName)
+        desc.text = "Daily and weekly challenges\nwill be added in a future update!"
+        desc.fontSize = 14
+        desc.fontColor = SKColor(white: 0.6, alpha: 1.0)
+        desc.numberOfLines = 2
+        desc.position = CGPoint(x: 0, y: 80)
+        content.addChild(desc)
+
+        // Show current goals based on stats
+        let goalsTitle = SKLabelNode(fontNamed: UIConfig.fontName)
+        goalsTitle.text = "Current Goals"
+        goalsTitle.fontSize = 16
+        goalsTitle.fontColor = .white
+        goalsTitle.position = CGPoint(x: 0, y: 30)
+        content.addChild(goalsTitle)
+
+        let stats = GameManager.shared.metaProgression
+
+        // Goal 1: Reach wave 10
+        let goal1Progress = min(stats.highestWave, 10)
+        let goal1Card = createGoalCard(
+            title: "Wave Master",
+            description: "Reach Wave 10",
+            progress: "\(goal1Progress)/10",
+            progressRatio: CGFloat(goal1Progress) / 10.0,
+            color: SKColor(red: 0.3, green: 0.7, blue: 0.4, alpha: 1.0),
+            isComplete: goal1Progress >= 10
         )
-        weeklyCard.position = CGPoint(x: 0, y: -80)
-        content.addChild(weeklyCard)
+        goal1Card.position = CGPoint(x: 0, y: -30)
+        content.addChild(goal1Card)
+
+        // Goal 2: Kill 100 enemies total
+        let goal2Progress = min(stats.totalKills, 100)
+        let goal2Card = createGoalCard(
+            title: "Hunter",
+            description: "Kill 100 enemies total",
+            progress: "\(goal2Progress)/100",
+            progressRatio: CGFloat(goal2Progress) / 100.0,
+            color: SKColor(red: 0.8, green: 0.4, blue: 0.3, alpha: 1.0),
+            isComplete: goal2Progress >= 100
+        )
+        goal2Card.position = CGPoint(x: 0, y: -110)
+        content.addChild(goal2Card)
+
+        // Goal 3: Complete 5 runs
+        let goal3Progress = min(stats.totalRuns, 5)
+        let goal3Card = createGoalCard(
+            title: "Persistent",
+            description: "Complete 5 runs",
+            progress: "\(goal3Progress)/5",
+            progressRatio: CGFloat(goal3Progress) / 5.0,
+            color: SKColor(red: 0.5, green: 0.5, blue: 0.8, alpha: 1.0),
+            isComplete: goal3Progress >= 5
+        )
+        goal3Card.position = CGPoint(x: 0, y: -190)
+        content.addChild(goal3Card)
+    }
+
+    private func createGoalCard(title: String, description: String, progress: String, progressRatio: CGFloat, color: SKColor, isComplete: Bool) -> SKNode {
+        let card = SKNode()
+
+        let bg = SKShapeNode(rectOf: CGSize(width: 280, height: 65), cornerRadius: 10)
+        bg.fillColor = isComplete ? color.withAlphaComponent(0.25) : SKColor(red: 0.1, green: 0.12, blue: 0.15, alpha: 1.0)
+        bg.strokeColor = isComplete ? color : SKColor(white: 0.2, alpha: 1.0)
+        bg.lineWidth = isComplete ? 2 : 1
+        if isComplete { bg.glowWidth = 3 }
+        card.addChild(bg)
+
+        // Title
+        let titleLabel = SKLabelNode(fontNamed: UIConfig.fontName)
+        titleLabel.text = isComplete ? "✓ \(title)" : title
+        titleLabel.fontSize = 14
+        titleLabel.fontColor = isComplete ? color : .white
+        titleLabel.horizontalAlignmentMode = .left
+        titleLabel.position = CGPoint(x: -125, y: 12)
+        card.addChild(titleLabel)
+
+        // Description
+        let descLabel = SKLabelNode(fontNamed: UIConfig.fontName)
+        descLabel.text = description
+        descLabel.fontSize = 10
+        descLabel.fontColor = SKColor(white: 0.5, alpha: 1.0)
+        descLabel.horizontalAlignmentMode = .left
+        descLabel.position = CGPoint(x: -125, y: -5)
+        card.addChild(descLabel)
+
+        // Progress bar
+        let barWidth: CGFloat = 100
+        let barBg = SKShapeNode(rectOf: CGSize(width: barWidth, height: 8), cornerRadius: 4)
+        barBg.fillColor = SKColor(white: 0.15, alpha: 1.0)
+        barBg.strokeColor = .clear
+        barBg.position = CGPoint(x: 75, y: -18)
+        card.addChild(barBg)
+
+        let fillWidth = max(barWidth * progressRatio, 4)
+        let barFill = SKShapeNode(rectOf: CGSize(width: fillWidth, height: 6), cornerRadius: 3)
+        barFill.fillColor = color
+        barFill.strokeColor = .clear
+        barFill.position = CGPoint(x: 75 + (fillWidth - barWidth) / 2, y: -18)
+        card.addChild(barFill)
+
+        // Progress text
+        let progressLabel = SKLabelNode(fontNamed: UIConfig.fontName)
+        progressLabel.text = progress
+        progressLabel.fontSize = 10
+        progressLabel.fontColor = color
+        progressLabel.horizontalAlignmentMode = .right
+        progressLabel.position = CGPoint(x: 125, y: 8)
+        card.addChild(progressLabel)
+
+        return card
     }
 
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
-    }
-
-    private func createChallengeCard(title: String, description: String, reward: String, progress: String, timeRemaining: String, color: SKColor) -> SKNode {
-        let card = SKNode()
-
-        // Card bounds: 280x120, so -140 to +140 horizontally, -60 to +60 vertically
-        let bg = SKShapeNode(rectOf: CGSize(width: 280, height: 120), cornerRadius: 12)
-        bg.fillColor = color.withAlphaComponent(0.15)
-        bg.strokeColor = color
-        bg.lineWidth = 2
-        card.addChild(bg)
-
-        // Title - centered at top
-        let titleLabel = SKLabelNode(fontNamed: UIConfig.fontName)
-        titleLabel.text = title
-        titleLabel.fontSize = 14
-        titleLabel.fontColor = color
-        titleLabel.position = CGPoint(x: 0, y: 42)
-        card.addChild(titleLabel)
-
-        // Description - centered below title
-        let descLabel = SKLabelNode(fontNamed: UIConfig.fontName)
-        descLabel.text = description
-        descLabel.fontSize = 10
-        descLabel.fontColor = .white
-        descLabel.preferredMaxLayoutWidth = 250
-        descLabel.numberOfLines = 2
-        descLabel.position = CGPoint(x: 0, y: 18)
-        card.addChild(descLabel)
-
-        // Progress bar - full width with padding
-        let barWidth: CGFloat = 240
-        let progressBg = SKShapeNode(rectOf: CGSize(width: barWidth, height: 10), cornerRadius: 5)
-        progressBg.fillColor = SKColor(white: 0.15, alpha: 1.0)
-        progressBg.strokeColor = .clear
-        progressBg.position = CGPoint(x: 0, y: -12)
-        card.addChild(progressBg)
-
-        // Calculate fill width based on progress (for now use fixed ratio)
-        let fillRatio: CGFloat = 0.6  // 60% progress
-        let fillWidth = barWidth * fillRatio
-        let progressFill = SKShapeNode(rectOf: CGSize(width: fillWidth, height: 8), cornerRadius: 4)
-        progressFill.fillColor = color
-        progressFill.strokeColor = .clear
-        progressFill.position = CGPoint(x: (fillWidth - barWidth) / 2, y: -12)
-        card.addChild(progressFill)
-
-        // Progress text - right aligned on the bar
-        let progressLabel = SKLabelNode(fontNamed: UIConfig.fontName)
-        progressLabel.text = progress
-        progressLabel.fontSize = 9
-        progressLabel.fontColor = SKColor(white: 0.7, alpha: 1.0)
-        progressLabel.horizontalAlignmentMode = .right
-        progressLabel.position = CGPoint(x: 125, y: -28)
-        card.addChild(progressLabel)
-
-        // Reward - left side at bottom
-        let rewardLabel = SKLabelNode(fontNamed: UIConfig.fontName)
-        rewardLabel.text = "Reward: \(reward)"
-        rewardLabel.fontSize = 10
-        rewardLabel.fontColor = SKColor(red: 1.0, green: 0.85, blue: 0.3, alpha: 1.0)
-        rewardLabel.horizontalAlignmentMode = .left
-        rewardLabel.position = CGPoint(x: -125, y: -45)
-        card.addChild(rewardLabel)
-
-        // Time remaining - right side at bottom
-        let timeLabel = SKLabelNode(fontNamed: UIConfig.fontName)
-        timeLabel.text = timeRemaining
-        timeLabel.fontSize = 10
-        timeLabel.fontColor = SKColor(white: 0.5, alpha: 1.0)
-        timeLabel.horizontalAlignmentMode = .right
-        timeLabel.position = CGPoint(x: 125, y: -45)
-        card.addChild(timeLabel)
-
-        return card
     }
 }
 

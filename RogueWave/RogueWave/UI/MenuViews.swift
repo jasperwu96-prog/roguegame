@@ -509,56 +509,65 @@ class CharacterSelectView: SubMenuView {
         let charClass = selectedClass
 
         // Background panel for stats
-        let statsBg = SKShapeNode(rectOf: CGSize(width: 280, height: 50), cornerRadius: 10)
+        let statsBg = SKShapeNode(rectOf: CGSize(width: 280, height: 58), cornerRadius: 10)
         statsBg.fillColor = charClass.color.withAlphaComponent(0.15)
         statsBg.strokeColor = charClass.color.withAlphaComponent(0.4)
         statsBg.lineWidth = 1
-        statsBg.position = CGPoint(x: 0, y: 0)
+        statsBg.position = CGPoint(x: 0, y: 2)
         stats.addChild(statsBg)
 
-        // Stats based on character - use icons/colored values
-        let statsList: [(String, String, SKColor)]
+        // Stats based on character - use icons/colored values with labels
+        // Format: (label, icon, value, color)
+        let statsList: [(String, String, String, SKColor)]
         switch charClass {
         case .knight:
             statsList = [
-                ("❤️", "100%", SKColor(red: 1.0, green: 0.4, blue: 0.4, alpha: 1.0)),
-                ("⚔️", "100%", SKColor(red: 1.0, green: 0.8, blue: 0.3, alpha: 1.0)),
-                ("💨", "100%", SKColor(red: 0.4, green: 0.8, blue: 1.0, alpha: 1.0)),
-                ("🛡️", "Shield", SKColor(red: 0.5, green: 0.7, blue: 1.0, alpha: 1.0))
+                ("HP", "❤️", "100%", SKColor(red: 1.0, green: 0.4, blue: 0.4, alpha: 1.0)),
+                ("DMG", "⚔️", "100%", SKColor(red: 1.0, green: 0.8, blue: 0.3, alpha: 1.0)),
+                ("SPD", "💨", "100%", SKColor(red: 0.4, green: 0.8, blue: 1.0, alpha: 1.0)),
+                ("ABILITY", "🛡️", "Shield", SKColor(red: 0.5, green: 0.7, blue: 1.0, alpha: 1.0))
             ]
         case .rogue:
             statsList = [
-                ("❤️", "80%", SKColor(red: 1.0, green: 0.4, blue: 0.4, alpha: 1.0)),
-                ("⚔️", "100%", SKColor(red: 1.0, green: 0.8, blue: 0.3, alpha: 1.0)),
-                ("💨", "130%", SKColor(red: 0.3, green: 1.0, blue: 0.5, alpha: 1.0)),
-                ("💥", "+20%", SKColor(red: 1.0, green: 0.6, blue: 0.2, alpha: 1.0))
+                ("HP", "❤️", "80%", SKColor(red: 1.0, green: 0.4, blue: 0.4, alpha: 1.0)),
+                ("DMG", "⚔️", "100%", SKColor(red: 1.0, green: 0.8, blue: 0.3, alpha: 1.0)),
+                ("SPD", "💨", "130%", SKColor(red: 0.3, green: 1.0, blue: 0.5, alpha: 1.0)),
+                ("CRIT", "💥", "+20%", SKColor(red: 1.0, green: 0.6, blue: 0.2, alpha: 1.0))
             ]
         case .mage:
             statsList = [
-                ("❤️", "70%", SKColor(red: 1.0, green: 0.4, blue: 0.4, alpha: 1.0)),
-                ("⚔️", "120%", SKColor(red: 0.3, green: 1.0, blue: 0.5, alpha: 1.0)),
-                ("💨", "90%", SKColor(red: 0.4, green: 0.8, blue: 1.0, alpha: 1.0)),
-                ("⏱️", "-30%", SKColor(red: 0.8, green: 0.5, blue: 1.0, alpha: 1.0))
+                ("HP", "❤️", "70%", SKColor(red: 1.0, green: 0.4, blue: 0.4, alpha: 1.0)),
+                ("DMG", "⚔️", "120%", SKColor(red: 0.3, green: 1.0, blue: 0.5, alpha: 1.0)),
+                ("SPD", "💨", "90%", SKColor(red: 0.4, green: 0.8, blue: 1.0, alpha: 1.0)),
+                ("CD", "⏱️", "-30%", SKColor(red: 0.8, green: 0.5, blue: 1.0, alpha: 1.0))
             ]
         case .berserker:
             statsList = [
-                ("❤️", "70%", SKColor(red: 1.0, green: 0.4, blue: 0.4, alpha: 1.0)),
-                ("⚔️", "150%", SKColor(red: 0.3, green: 1.0, blue: 0.5, alpha: 1.0)),
-                ("💨", "100%", SKColor(red: 0.4, green: 0.8, blue: 1.0, alpha: 1.0)),
-                ("🩸", "10%", SKColor(red: 1.0, green: 0.3, blue: 0.4, alpha: 1.0))
+                ("HP", "❤️", "70%", SKColor(red: 1.0, green: 0.4, blue: 0.4, alpha: 1.0)),
+                ("DMG", "⚔️", "150%", SKColor(red: 0.3, green: 1.0, blue: 0.5, alpha: 1.0)),
+                ("SPD", "💨", "100%", SKColor(red: 0.4, green: 0.8, blue: 1.0, alpha: 1.0)),
+                ("STEAL", "🩸", "10%", SKColor(red: 1.0, green: 0.3, blue: 0.4, alpha: 1.0))
             ]
         }
 
         let statSpacing: CGFloat = 68
         let startX = -statSpacing * 1.5
-        for (index, (icon, value, color)) in statsList.enumerated() {
+        for (index, (label, icon, value, color)) in statsList.enumerated() {
             let x = startX + CGFloat(index) * statSpacing
+
+            // Label text above icon
+            let labelNode = SKLabelNode(fontNamed: UIConfig.fontName)
+            labelNode.text = label
+            labelNode.fontSize = 8
+            labelNode.fontColor = SKColor.white.withAlphaComponent(0.6)
+            labelNode.position = CGPoint(x: x, y: 18)
+            stats.addChild(labelNode)
 
             // Icon
             let iconNode = SKLabelNode(fontNamed: UIConfig.fontName)
             iconNode.text = icon
             iconNode.fontSize = 16
-            iconNode.position = CGPoint(x: x, y: 6)
+            iconNode.position = CGPoint(x: x, y: 2)
             stats.addChild(iconNode)
 
             // Value with color

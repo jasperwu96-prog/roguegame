@@ -593,6 +593,10 @@ class GameScene: SKScene {
 
         gameState = .paused
         isPaused = true
+
+        // Remove wave notification if visible to prevent overlap with pause text
+        gameCamera.childNode(withName: "waveNotification")?.removeFromParent()
+
         uiManager.showPauseScreen()
     }
 
@@ -1335,7 +1339,11 @@ extension GameScene: WaveManagerDelegate {
     }
 
     private func showWaveNotification(wave: Int, modifiers: [WaveModifier], isBoss: Bool) {
+        // Remove any existing wave notification first
+        gameCamera.childNode(withName: "waveNotification")?.removeFromParent()
+
         let notification = SKNode()
+        notification.name = "waveNotification"
         notification.position = CGPoint(x: 0, y: 100)  // Centered above middle of screen
         notification.zPosition = GameConfig.ZPosition.overlay
 

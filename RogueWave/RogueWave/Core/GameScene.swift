@@ -237,6 +237,10 @@ class GameScene: SKScene {
         // Use seeded random for consistent generation
         srand48(coord.x * 73856093 ^ coord.y * 19349663)
 
+        // Determine biome for this chunk center
+        let chunkCenter = CGPoint(x: chunkOriginX + chunkSize / 2, y: chunkOriginY + chunkSize / 2)
+        let biome = getBiome(at: chunkCenter)
+
         // Create ground tiles for this chunk
         let tileSize: CGFloat = 50
         let tilesPerChunk = Int(chunkSize / tileSize)
@@ -246,13 +250,13 @@ class GameScene: SKScene {
                 let tileX = chunkOriginX + CGFloat(tx) * tileSize + tileSize / 2
                 let tileY = chunkOriginY + CGFloat(ty) * tileSize + tileSize / 2
 
-                let tile = createGroundTile(at: CGPoint(x: tileX, y: tileY), size: tileSize)
+                let tile = createGroundTile(at: CGPoint(x: tileX, y: tileY), size: tileSize, biome: biome)
                 tile.name = "chunk_\(coord.x)_\(coord.y)"
                 backgroundLayer.addChild(tile)
             }
         }
 
-        // Add environmental objects (trees, rocks, bushes)
+        // Add environmental objects based on biome
         let objectCount = Int(drand48() * 4) + 2  // 2-5 objects per chunk
 
         for _ in 0..<objectCount {
@@ -263,21 +267,250 @@ class GameScene: SKScene {
             let distFromOrigin = sqrt(objX * objX + objY * objY)
             if distFromOrigin < 100 { continue }
 
-            let objectType = drand48()
-            let obj: SKNode
-
-            if objectType < 0.4 {
-                obj = createTree(at: CGPoint(x: objX, y: objY))
-            } else if objectType < 0.7 {
-                obj = createRock(at: CGPoint(x: objX, y: objY))
-            } else {
-                obj = createBush(at: CGPoint(x: objX, y: objY))
-            }
+            let obj = createBiomeObject(at: CGPoint(x: objX, y: objY), biome: biome)
 
             obj.name = "chunk_\(coord.x)_\(coord.y)"
             gameLayer.addChild(obj)
             environmentObjects.append(obj)
         }
+
+        // Chance to spawn a structure (house, well, etc.)
+        if drand48() < 0.25 {
+            let structX = chunkOriginX + CGFloat(drand48()) * chunkSize * 0.6 + chunkSize * 0.2
+            let structY = chunkOriginY + CGFloat(drand48()) * chunkSize * 0.6 + chunkSize * 0.2
+
+            let distFromOrigin = sqrt(structX * structX + structY * structY)
+            if distFromOrigin > 200 {
+                let structure = createBiomeStructure(at: CGPoint(x: structX, y: structY), biome: biome)
+                structure.name = "chunk_\(coord.x)_\(coord.y)"
+                gameLayer.addChild(structure)
+                environmentObjects.append(structure)
+            }
+        }
+    }
+
+    private func createBiomeObject(at position: CGPoint, biome: Biome) -> SKNode {
+        let objectType = drand48()
+
+        switch biome {
+        case .forest:
+            if objectType < 0.4 {
+                return createTree(at: position)
+            } else if objectType < 0.7 {
+                return createRock(at: position)
+            } else {
+                return createBush(at: position)
+            }
+
+        case .desert:
+            if objectType < 0.5 {
+                return createCactus(at: position)
+            } else if objectType < 0.8 {
+                return createRock(at: position)
+            } else {
+                return createDeadBush(at: position)
+            }
+
+        case .snow:
+            if objectType < 0.5 {
+                return createSnowTree(at: position)
+            } else if objectType < 0.8 {
+                return createRock(at: position)
+            } else {
+                return createSnowDrift(at: position)
+            }
+
+        case .swamp:
+            if objectType < 0.5 {
+                return createSwampTree(at: position)
+            } else if objectType < 0.75 {
+                return createSwampPool(at: position)
+            } else {
+                return createBush(at: position)
+            }
+
+        case .ruins:
+            if objectType < 0.35 {
+                return createRuinPillar(at: position)
+            } else if objectType < 0.6 {
+                return createGravestone(at: position)
+            } else if objectType < 0.8 {
+                return createRock(at: position)
+            } else {
+                return createDeadTree(at: position)
+            }
+        }
+    }
+
+    private func createBiomeStructure(at position: CGPoint, biome: Biome) -> SKNode {
+        let structType = drand48()
+
+        switch biome {
+        case .forest:
+            if structType < 0.5 {
+                return createHouse(at: position, biome: biome)
+            } else if structType < 0.8 {
+                return createWell(at: position)
+            } else {
+                return createFence(at: position, biome: biome)
+            }
+
+        case .desert:
+            if structType < 0.6 {
+                return createHouse(at: position, biome: biome)
+            } else {
+                return createWell(at: position)
+            }
+
+        case .snow:
+            if structType < 0.6 {
+                return createHouse(at: position, biome: biome)
+            } else {
+                return createFence(at: position, biome: biome)
+            }
+
+        case .swamp:
+            if structType < 0.5 {
+                return createHouse(at: position, biome: biome)
+            } else {
+                return createFence(at: position, biome: biome)
+            }
+
+        case .ruins:
+            if structType < 0.4 {
+                return createHouse(at: position, biome: biome)
+            } else if structType < 0.7 {
+                return createFence(at: position, biome: biome)
+            } else {
+                return createRuinPillar(at: position)
+            }
+        }
+    }
+
+    private func createDeadBush(at position: CGPoint) -> SKNode {
+        let bush = SKNode()
+        bush.position = position
+        bush.zPosition = GameConfig.ZPosition.enemy - 3
+
+        let bushColor = SKColor(red: 0.5, green: 0.42, blue: 0.3, alpha: 0.9)
+
+        // Dead branches
+        for _ in 0..<5 {
+            let branchLength = CGFloat(drand48()) * 12 + 6
+            let branch = SKShapeNode(rectOf: CGSize(width: 2, height: branchLength))
+            branch.fillColor = bushColor
+            branch.strokeColor = .clear
+            branch.position = CGPoint(x: CGFloat(drand48()) * 10 - 5, y: branchLength / 2)
+            branch.zRotation = CGFloat(drand48()) * 1.0 - 0.5
+            bush.addChild(branch)
+        }
+
+        return bush
+    }
+
+    private func createSnowDrift(at position: CGPoint) -> SKNode {
+        let drift = SKNode()
+        drift.position = position
+        drift.zPosition = GameConfig.ZPosition.enemy - 3
+
+        let driftWidth = CGFloat(drand48()) * 20 + 15
+        let driftHeight = CGFloat(drand48()) * 8 + 5
+
+        let snow = SKShapeNode(ellipseOf: CGSize(width: driftWidth, height: driftHeight))
+        snow.fillColor = SKColor(red: 0.92, green: 0.94, blue: 0.98, alpha: 0.9)
+        snow.strokeColor = SKColor(red: 0.8, green: 0.85, blue: 0.9, alpha: 0.5)
+        snow.lineWidth = 1
+        drift.addChild(snow)
+
+        // Sparkle
+        if drand48() < 0.5 {
+            let sparkle = SKShapeNode(circleOfRadius: 2)
+            sparkle.fillColor = SKColor.white
+            sparkle.strokeColor = .clear
+            sparkle.position = CGPoint(x: CGFloat(drand48()) * 8 - 4, y: driftHeight * 0.3)
+            sparkle.alpha = 0.8
+            drift.addChild(sparkle)
+        }
+
+        return drift
+    }
+
+    private func createSwampPool(at position: CGPoint) -> SKNode {
+        let pool = SKNode()
+        pool.position = position
+        pool.zPosition = GameConfig.ZPosition.enemy - 3
+
+        let poolWidth = CGFloat(drand48()) * 25 + 15
+        let poolHeight = CGFloat(drand48()) * 15 + 10
+
+        let water = SKShapeNode(ellipseOf: CGSize(width: poolWidth, height: poolHeight))
+        water.fillColor = SKColor(red: 0.15, green: 0.22, blue: 0.18, alpha: 0.8)
+        water.strokeColor = SKColor(red: 0.2, green: 0.28, blue: 0.22, alpha: 0.5)
+        water.lineWidth = 2
+        pool.addChild(water)
+
+        // Bubbles
+        for _ in 0..<2 {
+            let bubble = SKShapeNode(circleOfRadius: CGFloat(drand48()) * 2 + 1)
+            bubble.fillColor = SKColor(red: 0.25, green: 0.35, blue: 0.28, alpha: 0.6)
+            bubble.strokeColor = .clear
+            bubble.position = CGPoint(
+                x: CGFloat(drand48()) * poolWidth * 0.5 - poolWidth * 0.25,
+                y: CGFloat(drand48()) * poolHeight * 0.3
+            )
+            pool.addChild(bubble)
+        }
+
+        return pool
+    }
+
+    private func createDeadTree(at position: CGPoint) -> SKNode {
+        let tree = SKNode()
+        tree.position = position
+        tree.zPosition = GameConfig.ZPosition.enemy - 1
+
+        let trunkHeight: CGFloat = CGFloat(drand48()) * 25 + 30
+        let trunkWidth: CGFloat = CGFloat(drand48()) * 6 + 10
+
+        // Dead trunk
+        let trunk = SKShapeNode(rectOf: CGSize(width: trunkWidth, height: trunkHeight), cornerRadius: 2)
+        trunk.fillColor = SKColor(red: 0.28, green: 0.24, blue: 0.22, alpha: 1.0)
+        trunk.strokeColor = SKColor(red: 0.2, green: 0.17, blue: 0.15, alpha: 1.0)
+        trunk.lineWidth = 1
+        trunk.position = CGPoint(x: 0, y: trunkHeight / 2)
+        tree.addChild(trunk)
+
+        // Dead branches
+        for i in 0..<3 {
+            let branchLength = CGFloat(drand48()) * 15 + 8
+            let branch = SKShapeNode(rectOf: CGSize(width: 3, height: branchLength))
+            branch.fillColor = SKColor(red: 0.3, green: 0.26, blue: 0.24, alpha: 1.0)
+            branch.strokeColor = .clear
+            let side: CGFloat = (i % 2 == 0) ? 1 : -1
+            branch.position = CGPoint(x: side * (trunkWidth / 2 + branchLength / 3),
+                                       y: trunkHeight * (0.5 + CGFloat(i) * 0.15))
+            branch.zRotation = side * CGFloat(drand48()) * 0.4 + side * 0.8
+            tree.addChild(branch)
+        }
+
+        // Shadow
+        let shadow = SKShapeNode(ellipseOf: CGSize(width: 30, height: 12))
+        shadow.fillColor = SKColor(red: 0, green: 0, blue: 0, alpha: 0.15)
+        shadow.strokeColor = .clear
+        shadow.position = CGPoint(x: 4, y: -4)
+        shadow.zPosition = -1
+        tree.addChild(shadow)
+
+        // Physics
+        let treeBody = SKPhysicsBody(circleOfRadius: trunkWidth * 1.5)
+        treeBody.isDynamic = false
+        treeBody.categoryBitMask = GameConfig.PhysicsCategory.boundary
+        treeBody.collisionBitMask = GameConfig.PhysicsCategory.player
+        treeBody.friction = 0
+        treeBody.restitution = 0
+        tree.physicsBody = treeBody
+
+        return tree
     }
 
     private func removeChunk(at coord: ChunkCoord) {
@@ -296,40 +529,152 @@ class GameScene: SKScene {
         }
     }
 
-    private func createGroundTile(at position: CGPoint, size: CGFloat) -> SKNode {
+    private func createGroundTile(at position: CGPoint, size: CGFloat, biome: Biome) -> SKNode {
         let tile = SKShapeNode(rectOf: CGSize(width: size - 1, height: size - 1))
 
-        // Vary grass colors slightly
-        let greenVariation = CGFloat(drand48()) * 0.08
-        let baseGreen: CGFloat = 0.28 + greenVariation
-        tile.fillColor = SKColor(red: 0.18, green: baseGreen, blue: 0.12, alpha: 1.0)
-        tile.strokeColor = SKColor(red: 0.12, green: 0.2, blue: 0.08, alpha: 0.3)
+        // Use biome-specific colors with slight variation
+        let variation = CGFloat(drand48()) * biome.groundVariation
+        var baseColor = biome.groundColor
+
+        // Apply variation to the base color
+        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+        baseColor.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        tile.fillColor = SKColor(red: red + variation - biome.groundVariation / 2,
+                                  green: green + variation - biome.groundVariation / 2,
+                                  blue: blue + variation - biome.groundVariation / 2,
+                                  alpha: alpha)
+        tile.strokeColor = biome.strokeColor
         tile.lineWidth = 0.5
         tile.position = position
 
-        // Add grass detail
-        if drand48() < 0.3 {
-            let grassBlade = SKShapeNode(rectOf: CGSize(width: 2, height: CGFloat(drand48()) * 8 + 4))
-            grassBlade.fillColor = SKColor(red: 0.2, green: 0.4, blue: 0.15, alpha: 0.6)
-            grassBlade.strokeColor = .clear
-            grassBlade.position = CGPoint(
-                x: CGFloat(drand48()) * size * 0.6 - size * 0.3,
-                y: CGFloat(drand48()) * size * 0.6 - size * 0.3
-            )
-            grassBlade.zRotation = CGFloat(drand48()) * 0.3 - 0.15
-            tile.addChild(grassBlade)
-        }
+        // Add biome-specific details
+        switch biome {
+        case .forest:
+            // Grass blades
+            if drand48() < 0.3 {
+                let grassBlade = SKShapeNode(rectOf: CGSize(width: 2, height: CGFloat(drand48()) * 8 + 4))
+                grassBlade.fillColor = SKColor(red: 0.2, green: 0.4, blue: 0.15, alpha: 0.6)
+                grassBlade.strokeColor = .clear
+                grassBlade.position = CGPoint(
+                    x: CGFloat(drand48()) * size * 0.6 - size * 0.3,
+                    y: CGFloat(drand48()) * size * 0.6 - size * 0.3
+                )
+                grassBlade.zRotation = CGFloat(drand48()) * 0.3 - 0.15
+                tile.addChild(grassBlade)
+            }
+            // Dirt patches
+            if drand48() < 0.1 {
+                let dirt = SKShapeNode(circleOfRadius: CGFloat(drand48()) * 8 + 4)
+                dirt.fillColor = SKColor(red: 0.25, green: 0.2, blue: 0.12, alpha: 0.5)
+                dirt.strokeColor = .clear
+                dirt.position = CGPoint(
+                    x: CGFloat(drand48()) * size * 0.5 - size * 0.25,
+                    y: CGFloat(drand48()) * size * 0.5 - size * 0.25
+                )
+                tile.addChild(dirt)
+            }
 
-        // Add dirt patches occasionally
-        if drand48() < 0.1 {
-            let dirt = SKShapeNode(circleOfRadius: CGFloat(drand48()) * 8 + 4)
-            dirt.fillColor = SKColor(red: 0.25, green: 0.2, blue: 0.12, alpha: 0.5)
-            dirt.strokeColor = .clear
-            dirt.position = CGPoint(
-                x: CGFloat(drand48()) * size * 0.5 - size * 0.25,
-                y: CGFloat(drand48()) * size * 0.5 - size * 0.25
-            )
-            tile.addChild(dirt)
+        case .desert:
+            // Sand ripples
+            if drand48() < 0.2 {
+                let ripple = SKShapeNode(ellipseOf: CGSize(width: size * 0.4, height: 3))
+                ripple.fillColor = SKColor(red: 0.7, green: 0.58, blue: 0.4, alpha: 0.4)
+                ripple.strokeColor = .clear
+                ripple.position = CGPoint(
+                    x: CGFloat(drand48()) * size * 0.4 - size * 0.2,
+                    y: CGFloat(drand48()) * size * 0.4 - size * 0.2
+                )
+                ripple.zRotation = CGFloat(drand48()) * 0.3
+                tile.addChild(ripple)
+            }
+            // Small pebbles
+            if drand48() < 0.15 {
+                let pebble = SKShapeNode(circleOfRadius: CGFloat(drand48()) * 3 + 1)
+                pebble.fillColor = SKColor(red: 0.55, green: 0.5, blue: 0.4, alpha: 0.6)
+                pebble.strokeColor = .clear
+                pebble.position = CGPoint(
+                    x: CGFloat(drand48()) * size * 0.6 - size * 0.3,
+                    y: CGFloat(drand48()) * size * 0.6 - size * 0.3
+                )
+                tile.addChild(pebble)
+            }
+
+        case .snow:
+            // Snow sparkles
+            if drand48() < 0.2 {
+                let sparkle = SKShapeNode(circleOfRadius: 1.5)
+                sparkle.fillColor = SKColor.white
+                sparkle.strokeColor = .clear
+                sparkle.alpha = CGFloat(drand48()) * 0.5 + 0.3
+                sparkle.position = CGPoint(
+                    x: CGFloat(drand48()) * size * 0.6 - size * 0.3,
+                    y: CGFloat(drand48()) * size * 0.6 - size * 0.3
+                )
+                tile.addChild(sparkle)
+            }
+            // Ice patches
+            if drand48() < 0.1 {
+                let ice = SKShapeNode(ellipseOf: CGSize(width: CGFloat(drand48()) * 10 + 5,
+                                                         height: CGFloat(drand48()) * 6 + 3))
+                ice.fillColor = SKColor(red: 0.7, green: 0.8, blue: 0.9, alpha: 0.4)
+                ice.strokeColor = .clear
+                ice.position = CGPoint(
+                    x: CGFloat(drand48()) * size * 0.4 - size * 0.2,
+                    y: CGFloat(drand48()) * size * 0.4 - size * 0.2
+                )
+                tile.addChild(ice)
+            }
+
+        case .swamp:
+            // Murky puddles
+            if drand48() < 0.25 {
+                let puddle = SKShapeNode(ellipseOf: CGSize(width: CGFloat(drand48()) * 12 + 6,
+                                                            height: CGFloat(drand48()) * 8 + 4))
+                puddle.fillColor = SKColor(red: 0.12, green: 0.18, blue: 0.12, alpha: 0.5)
+                puddle.strokeColor = .clear
+                puddle.position = CGPoint(
+                    x: CGFloat(drand48()) * size * 0.5 - size * 0.25,
+                    y: CGFloat(drand48()) * size * 0.5 - size * 0.25
+                )
+                tile.addChild(puddle)
+            }
+            // Moss
+            if drand48() < 0.2 {
+                let moss = SKShapeNode(circleOfRadius: CGFloat(drand48()) * 5 + 2)
+                moss.fillColor = SKColor(red: 0.25, green: 0.35, blue: 0.2, alpha: 0.5)
+                moss.strokeColor = .clear
+                moss.position = CGPoint(
+                    x: CGFloat(drand48()) * size * 0.6 - size * 0.3,
+                    y: CGFloat(drand48()) * size * 0.6 - size * 0.3
+                )
+                tile.addChild(moss)
+            }
+
+        case .ruins:
+            // Cracked stone
+            if drand48() < 0.2 {
+                let crack = SKShapeNode(rectOf: CGSize(width: 1, height: CGFloat(drand48()) * 10 + 5))
+                crack.fillColor = SKColor(red: 0.15, green: 0.12, blue: 0.18, alpha: 0.4)
+                crack.strokeColor = .clear
+                crack.position = CGPoint(
+                    x: CGFloat(drand48()) * size * 0.5 - size * 0.25,
+                    y: CGFloat(drand48()) * size * 0.5 - size * 0.25
+                )
+                crack.zRotation = CGFloat(drand48()) * .pi
+                tile.addChild(crack)
+            }
+            // Bone fragments
+            if drand48() < 0.08 {
+                let bone = SKShapeNode(ellipseOf: CGSize(width: 4, height: 2))
+                bone.fillColor = SKColor(red: 0.75, green: 0.72, blue: 0.68, alpha: 0.6)
+                bone.strokeColor = .clear
+                bone.position = CGPoint(
+                    x: CGFloat(drand48()) * size * 0.6 - size * 0.3,
+                    y: CGFloat(drand48()) * size * 0.6 - size * 0.3
+                )
+                bone.zRotation = CGFloat(drand48()) * .pi
+                tile.addChild(bone)
+            }
         }
 
         return tile
@@ -494,6 +839,614 @@ class GameScene: SKScene {
 
         // Bushes don't block movement (no physics body)
         return bush
+    }
+
+    // MARK: - Biome System
+
+    private enum Biome {
+        case forest      // Default green forest
+        case desert      // Sandy wasteland
+        case snow        // Frozen tundra
+        case swamp       // Dark murky swamp
+        case ruins       // Ancient ruins/graveyard
+
+        var groundColor: SKColor {
+            switch self {
+            case .forest: return SKColor(red: 0.18, green: 0.28, blue: 0.12, alpha: 1.0)
+            case .desert: return SKColor(red: 0.76, green: 0.65, blue: 0.45, alpha: 1.0)
+            case .snow: return SKColor(red: 0.85, green: 0.88, blue: 0.92, alpha: 1.0)
+            case .swamp: return SKColor(red: 0.2, green: 0.25, blue: 0.18, alpha: 1.0)
+            case .ruins: return SKColor(red: 0.25, green: 0.22, blue: 0.28, alpha: 1.0)
+            }
+        }
+
+        var groundVariation: CGFloat {
+            switch self {
+            case .forest: return 0.08
+            case .desert: return 0.05
+            case .snow: return 0.03
+            case .swamp: return 0.06
+            case .ruins: return 0.04
+            }
+        }
+
+        var strokeColor: SKColor {
+            switch self {
+            case .forest: return SKColor(red: 0.12, green: 0.2, blue: 0.08, alpha: 0.3)
+            case .desert: return SKColor(red: 0.6, green: 0.5, blue: 0.35, alpha: 0.3)
+            case .snow: return SKColor(red: 0.7, green: 0.75, blue: 0.8, alpha: 0.3)
+            case .swamp: return SKColor(red: 0.15, green: 0.18, blue: 0.12, alpha: 0.4)
+            case .ruins: return SKColor(red: 0.18, green: 0.15, blue: 0.2, alpha: 0.3)
+            }
+        }
+    }
+
+    private func getBiome(at position: CGPoint) -> Biome {
+        // Use noise-like function based on world coordinates
+        // Each biome zone is roughly 800-1200 units wide
+        let biomeScale: CGFloat = 800.0
+
+        // Use sin/cos to create smooth biome transitions
+        let nx = sin(position.x / biomeScale * 0.7) + cos(position.y / biomeScale * 0.5)
+        let ny = cos(position.x / biomeScale * 0.5) - sin(position.y / biomeScale * 0.8)
+
+        // Combine for biome selection
+        let biomeValue = (nx + ny) / 2.0
+
+        // Forest around spawn (within ~400 units)
+        let distFromOrigin = sqrt(position.x * position.x + position.y * position.y)
+        if distFromOrigin < 400 {
+            return .forest
+        }
+
+        // Select biome based on value
+        if biomeValue < -0.6 {
+            return .snow
+        } else if biomeValue < -0.2 {
+            return .ruins
+        } else if biomeValue < 0.3 {
+            return .forest
+        } else if biomeValue < 0.7 {
+            return .swamp
+        } else {
+            return .desert
+        }
+    }
+
+    // MARK: - Biome-Specific Structures
+
+    private func createHouse(at position: CGPoint, biome: Biome) -> SKNode {
+        let house = SKNode()
+        house.position = position
+        house.zPosition = GameConfig.ZPosition.enemy - 1
+
+        let houseWidth: CGFloat = CGFloat(drand48()) * 30 + 50
+        let houseHeight: CGFloat = CGFloat(drand48()) * 20 + 35
+        let roofHeight: CGFloat = houseHeight * 0.5
+
+        // Wall color based on biome
+        let wallColor: SKColor
+        let roofColor: SKColor
+        switch biome {
+        case .forest:
+            wallColor = SKColor(red: 0.55, green: 0.45, blue: 0.35, alpha: 1.0)
+            roofColor = SKColor(red: 0.4, green: 0.25, blue: 0.15, alpha: 1.0)
+        case .desert:
+            wallColor = SKColor(red: 0.85, green: 0.75, blue: 0.6, alpha: 1.0)
+            roofColor = SKColor(red: 0.7, green: 0.5, blue: 0.3, alpha: 1.0)
+        case .snow:
+            wallColor = SKColor(red: 0.7, green: 0.72, blue: 0.75, alpha: 1.0)
+            roofColor = SKColor(red: 0.3, green: 0.35, blue: 0.4, alpha: 1.0)
+        case .swamp:
+            wallColor = SKColor(red: 0.35, green: 0.38, blue: 0.32, alpha: 1.0)
+            roofColor = SKColor(red: 0.25, green: 0.3, blue: 0.22, alpha: 1.0)
+        case .ruins:
+            wallColor = SKColor(red: 0.4, green: 0.38, blue: 0.42, alpha: 1.0)
+            roofColor = SKColor(red: 0.3, green: 0.28, blue: 0.32, alpha: 1.0)
+        }
+
+        // House base/walls
+        let walls = SKShapeNode(rectOf: CGSize(width: houseWidth, height: houseHeight), cornerRadius: 2)
+        walls.fillColor = wallColor
+        walls.strokeColor = wallColor.blended(with: .black, amount: 0.3)
+        walls.lineWidth = 2
+        walls.position = CGPoint(x: 0, y: houseHeight / 2)
+        house.addChild(walls)
+
+        // Roof (triangle)
+        let roofPath = CGMutablePath()
+        roofPath.move(to: CGPoint(x: -houseWidth / 2 - 5, y: houseHeight))
+        roofPath.addLine(to: CGPoint(x: 0, y: houseHeight + roofHeight))
+        roofPath.addLine(to: CGPoint(x: houseWidth / 2 + 5, y: houseHeight))
+        roofPath.closeSubpath()
+
+        let roof = SKShapeNode(path: roofPath)
+        roof.fillColor = roofColor
+        roof.strokeColor = roofColor.blended(with: .black, amount: 0.2)
+        roof.lineWidth = 2
+        house.addChild(roof)
+
+        // Door
+        let doorWidth: CGFloat = houseWidth * 0.25
+        let doorHeight: CGFloat = houseHeight * 0.5
+        let door = SKShapeNode(rectOf: CGSize(width: doorWidth, height: doorHeight))
+        door.fillColor = SKColor(red: 0.25, green: 0.18, blue: 0.12, alpha: 1.0)
+        door.strokeColor = SKColor(red: 0.15, green: 0.1, blue: 0.05, alpha: 1.0)
+        door.lineWidth = 1
+        door.position = CGPoint(x: 0, y: doorHeight / 2)
+        house.addChild(door)
+
+        // Window
+        let windowSize: CGFloat = houseHeight * 0.2
+        let window = SKShapeNode(rectOf: CGSize(width: windowSize, height: windowSize))
+        window.fillColor = SKColor(red: 0.4, green: 0.5, blue: 0.6, alpha: 0.7)
+        window.strokeColor = SKColor(red: 0.2, green: 0.15, blue: 0.1, alpha: 1.0)
+        window.lineWidth = 1
+        window.position = CGPoint(x: houseWidth * 0.3, y: houseHeight * 0.6)
+        house.addChild(window)
+
+        // Shadow
+        let shadow = SKShapeNode(ellipseOf: CGSize(width: houseWidth * 1.3, height: houseHeight * 0.4))
+        shadow.fillColor = SKColor(red: 0, green: 0, blue: 0, alpha: 0.2)
+        shadow.strokeColor = .clear
+        shadow.position = CGPoint(x: 8, y: -5)
+        shadow.zPosition = -1
+        house.addChild(shadow)
+
+        // Physics body for collision
+        let houseBody = SKPhysicsBody(rectangleOf: CGSize(width: houseWidth, height: houseHeight),
+                                       center: CGPoint(x: 0, y: houseHeight / 2))
+        houseBody.isDynamic = false
+        houseBody.categoryBitMask = GameConfig.PhysicsCategory.boundary
+        houseBody.collisionBitMask = GameConfig.PhysicsCategory.player
+        houseBody.friction = 0
+        houseBody.restitution = 0
+        house.physicsBody = houseBody
+
+        return house
+    }
+
+    private func createGravestone(at position: CGPoint) -> SKNode {
+        let grave = SKNode()
+        grave.position = position
+        grave.zPosition = GameConfig.ZPosition.enemy - 2
+
+        let width: CGFloat = CGFloat(drand48()) * 8 + 12
+        let height: CGFloat = CGFloat(drand48()) * 15 + 20
+
+        // Gravestone shape
+        let stonePath = CGMutablePath()
+        stonePath.move(to: CGPoint(x: -width / 2, y: 0))
+        stonePath.addLine(to: CGPoint(x: -width / 2, y: height * 0.7))
+        stonePath.addQuadCurve(to: CGPoint(x: width / 2, y: height * 0.7),
+                                control: CGPoint(x: 0, y: height + 5))
+        stonePath.addLine(to: CGPoint(x: width / 2, y: 0))
+        stonePath.closeSubpath()
+
+        let stone = SKShapeNode(path: stonePath)
+        stone.fillColor = SKColor(red: 0.45, green: 0.43, blue: 0.48, alpha: 1.0)
+        stone.strokeColor = SKColor(red: 0.3, green: 0.28, blue: 0.32, alpha: 1.0)
+        stone.lineWidth = 1
+        grave.addChild(stone)
+
+        // Cross or marking on gravestone
+        if drand48() < 0.6 {
+            let crossV = SKShapeNode(rectOf: CGSize(width: 2, height: height * 0.4))
+            crossV.fillColor = SKColor(red: 0.35, green: 0.33, blue: 0.38, alpha: 1.0)
+            crossV.strokeColor = .clear
+            crossV.position = CGPoint(x: 0, y: height * 0.45)
+            grave.addChild(crossV)
+
+            let crossH = SKShapeNode(rectOf: CGSize(width: width * 0.5, height: 2))
+            crossH.fillColor = SKColor(red: 0.35, green: 0.33, blue: 0.38, alpha: 1.0)
+            crossH.strokeColor = .clear
+            crossH.position = CGPoint(x: 0, y: height * 0.55)
+            grave.addChild(crossH)
+        }
+
+        // Small dirt mound
+        let mound = SKShapeNode(ellipseOf: CGSize(width: width * 2, height: 8))
+        mound.fillColor = SKColor(red: 0.3, green: 0.25, blue: 0.2, alpha: 0.6)
+        mound.strokeColor = .clear
+        mound.position = CGPoint(x: 0, y: -2)
+        mound.zPosition = -1
+        grave.addChild(mound)
+
+        // Physics - small collision
+        let graveBody = SKPhysicsBody(circleOfRadius: width * 0.8)
+        graveBody.isDynamic = false
+        graveBody.categoryBitMask = GameConfig.PhysicsCategory.boundary
+        graveBody.collisionBitMask = GameConfig.PhysicsCategory.player
+        graveBody.friction = 0
+        graveBody.restitution = 0
+        grave.physicsBody = graveBody
+
+        return grave
+    }
+
+    private func createFence(at position: CGPoint, biome: Biome) -> SKNode {
+        let fence = SKNode()
+        fence.position = position
+        fence.zPosition = GameConfig.ZPosition.enemy - 2
+
+        let postCount = Int(drand48() * 2) + 3  // 3-4 posts
+        let postSpacing: CGFloat = 18
+        let totalWidth = CGFloat(postCount - 1) * postSpacing
+
+        let fenceColor: SKColor
+        switch biome {
+        case .snow:
+            fenceColor = SKColor(red: 0.6, green: 0.62, blue: 0.65, alpha: 1.0)
+        case .swamp:
+            fenceColor = SKColor(red: 0.3, green: 0.32, blue: 0.28, alpha: 1.0)
+        default:
+            fenceColor = SKColor(red: 0.4, green: 0.32, blue: 0.22, alpha: 1.0)
+        }
+
+        // Horizontal rail
+        let rail = SKShapeNode(rectOf: CGSize(width: totalWidth + 10, height: 4))
+        rail.fillColor = fenceColor
+        rail.strokeColor = fenceColor.blended(with: .black, amount: 0.2)
+        rail.lineWidth = 1
+        rail.position = CGPoint(x: 0, y: 15)
+        fence.addChild(rail)
+
+        // Posts
+        for i in 0..<postCount {
+            let x = CGFloat(i) * postSpacing - totalWidth / 2
+            let postHeight: CGFloat = CGFloat(drand48()) * 8 + 22
+
+            let post = SKShapeNode(rectOf: CGSize(width: 5, height: postHeight))
+            post.fillColor = fenceColor
+            post.strokeColor = fenceColor.blended(with: .black, amount: 0.2)
+            post.lineWidth = 1
+            post.position = CGPoint(x: x, y: postHeight / 2)
+            fence.addChild(post)
+
+            // Pointed top
+            let topPath = CGMutablePath()
+            topPath.move(to: CGPoint(x: x - 3, y: postHeight))
+            topPath.addLine(to: CGPoint(x: x, y: postHeight + 5))
+            topPath.addLine(to: CGPoint(x: x + 3, y: postHeight))
+            topPath.closeSubpath()
+            let top = SKShapeNode(path: topPath)
+            top.fillColor = fenceColor
+            top.strokeColor = .clear
+            fence.addChild(top)
+        }
+
+        // Physics body
+        let fenceBody = SKPhysicsBody(rectangleOf: CGSize(width: totalWidth + 10, height: 25),
+                                       center: CGPoint(x: 0, y: 12))
+        fenceBody.isDynamic = false
+        fenceBody.categoryBitMask = GameConfig.PhysicsCategory.boundary
+        fenceBody.collisionBitMask = GameConfig.PhysicsCategory.player
+        fenceBody.friction = 0
+        fenceBody.restitution = 0
+        fence.physicsBody = fenceBody
+
+        return fence
+    }
+
+    private func createWell(at position: CGPoint) -> SKNode {
+        let well = SKNode()
+        well.position = position
+        well.zPosition = GameConfig.ZPosition.enemy - 1
+
+        let radius: CGFloat = 20
+
+        // Stone base (circular)
+        let base = SKShapeNode(circleOfRadius: radius)
+        base.fillColor = SKColor(red: 0.45, green: 0.42, blue: 0.4, alpha: 1.0)
+        base.strokeColor = SKColor(red: 0.35, green: 0.32, blue: 0.3, alpha: 1.0)
+        base.lineWidth = 3
+        well.addChild(base)
+
+        // Inner dark water
+        let water = SKShapeNode(circleOfRadius: radius * 0.6)
+        water.fillColor = SKColor(red: 0.1, green: 0.15, blue: 0.25, alpha: 1.0)
+        water.strokeColor = .clear
+        well.addChild(water)
+
+        // Roof posts
+        let postHeight: CGFloat = 35
+        for xMult: CGFloat in [-1, 1] {
+            let post = SKShapeNode(rectOf: CGSize(width: 4, height: postHeight))
+            post.fillColor = SKColor(red: 0.35, green: 0.28, blue: 0.2, alpha: 1.0)
+            post.strokeColor = SKColor(red: 0.25, green: 0.2, blue: 0.15, alpha: 1.0)
+            post.lineWidth = 1
+            post.position = CGPoint(x: xMult * (radius - 3), y: postHeight / 2)
+            well.addChild(post)
+        }
+
+        // Roof
+        let roofPath = CGMutablePath()
+        roofPath.move(to: CGPoint(x: -radius - 5, y: postHeight))
+        roofPath.addLine(to: CGPoint(x: 0, y: postHeight + 15))
+        roofPath.addLine(to: CGPoint(x: radius + 5, y: postHeight))
+        roofPath.closeSubpath()
+        let roof = SKShapeNode(path: roofPath)
+        roof.fillColor = SKColor(red: 0.4, green: 0.25, blue: 0.15, alpha: 1.0)
+        roof.strokeColor = SKColor(red: 0.3, green: 0.2, blue: 0.1, alpha: 1.0)
+        roof.lineWidth = 2
+        well.addChild(roof)
+
+        // Shadow
+        let shadow = SKShapeNode(ellipseOf: CGSize(width: radius * 2.5, height: radius))
+        shadow.fillColor = SKColor(red: 0, green: 0, blue: 0, alpha: 0.2)
+        shadow.strokeColor = .clear
+        shadow.position = CGPoint(x: 5, y: -5)
+        shadow.zPosition = -1
+        well.addChild(shadow)
+
+        // Physics body
+        let wellBody = SKPhysicsBody(circleOfRadius: radius)
+        wellBody.isDynamic = false
+        wellBody.categoryBitMask = GameConfig.PhysicsCategory.boundary
+        wellBody.collisionBitMask = GameConfig.PhysicsCategory.player
+        wellBody.friction = 0
+        wellBody.restitution = 0
+        well.physicsBody = wellBody
+
+        return well
+    }
+
+    private func createCactus(at position: CGPoint) -> SKNode {
+        let cactus = SKNode()
+        cactus.position = position
+        cactus.zPosition = GameConfig.ZPosition.enemy - 2
+
+        let cactusColor = SKColor(red: 0.3, green: 0.55, blue: 0.3, alpha: 1.0)
+        let height: CGFloat = CGFloat(drand48()) * 25 + 30
+
+        // Main body
+        let body = SKShapeNode(rectOf: CGSize(width: 14, height: height), cornerRadius: 6)
+        body.fillColor = cactusColor
+        body.strokeColor = SKColor(red: 0.2, green: 0.4, blue: 0.2, alpha: 1.0)
+        body.lineWidth = 2
+        body.position = CGPoint(x: 0, y: height / 2)
+        cactus.addChild(body)
+
+        // Arms
+        if drand48() < 0.7 {
+            let armHeight: CGFloat = height * 0.3
+            let armY = height * (0.4 + CGFloat(drand48()) * 0.3)
+            let armSide: CGFloat = drand48() < 0.5 ? -1 : 1
+
+            // Horizontal part
+            let armH = SKShapeNode(rectOf: CGSize(width: 15, height: 10), cornerRadius: 4)
+            armH.fillColor = cactusColor
+            armH.strokeColor = SKColor(red: 0.2, green: 0.4, blue: 0.2, alpha: 1.0)
+            armH.lineWidth = 1
+            armH.position = CGPoint(x: armSide * 14, y: armY)
+            cactus.addChild(armH)
+
+            // Vertical part
+            let armV = SKShapeNode(rectOf: CGSize(width: 10, height: armHeight), cornerRadius: 4)
+            armV.fillColor = cactusColor
+            armV.strokeColor = SKColor(red: 0.2, green: 0.4, blue: 0.2, alpha: 1.0)
+            armV.lineWidth = 1
+            armV.position = CGPoint(x: armSide * 19, y: armY + armHeight / 2)
+            cactus.addChild(armV)
+        }
+
+        // Shadow
+        let shadow = SKShapeNode(ellipseOf: CGSize(width: 25, height: 10))
+        shadow.fillColor = SKColor(red: 0, green: 0, blue: 0, alpha: 0.15)
+        shadow.strokeColor = .clear
+        shadow.position = CGPoint(x: 3, y: -3)
+        shadow.zPosition = -1
+        cactus.addChild(shadow)
+
+        // Physics
+        let cactusBody = SKPhysicsBody(circleOfRadius: 10)
+        cactusBody.isDynamic = false
+        cactusBody.categoryBitMask = GameConfig.PhysicsCategory.boundary
+        cactusBody.collisionBitMask = GameConfig.PhysicsCategory.player
+        cactusBody.friction = 0
+        cactusBody.restitution = 0
+        cactus.physicsBody = cactusBody
+
+        return cactus
+    }
+
+    private func createSnowTree(at position: CGPoint) -> SKNode {
+        let tree = SKNode()
+        tree.position = position
+        tree.zPosition = GameConfig.ZPosition.enemy - 1
+
+        let trunkHeight: CGFloat = CGFloat(drand48()) * 15 + 25
+        let trunkWidth: CGFloat = CGFloat(drand48()) * 6 + 10
+
+        // Trunk
+        let trunk = SKShapeNode(rectOf: CGSize(width: trunkWidth, height: trunkHeight), cornerRadius: 2)
+        trunk.fillColor = SKColor(red: 0.4, green: 0.35, blue: 0.3, alpha: 1.0)
+        trunk.strokeColor = SKColor(red: 0.3, green: 0.25, blue: 0.2, alpha: 1.0)
+        trunk.lineWidth = 1
+        trunk.position = CGPoint(x: 0, y: trunkHeight / 2)
+        tree.addChild(trunk)
+
+        // Snow-covered pine foliage (triangles stacked)
+        let pineColor = SKColor(red: 0.2, green: 0.35, blue: 0.25, alpha: 1.0)
+        let snowColor = SKColor(red: 0.9, green: 0.92, blue: 0.95, alpha: 0.8)
+
+        for i in 0..<3 {
+            let layerY = trunkHeight + CGFloat(i) * 18
+            let layerSize: CGFloat = 30 - CGFloat(i) * 8
+
+            let pinePath = CGMutablePath()
+            pinePath.move(to: CGPoint(x: -layerSize, y: layerY))
+            pinePath.addLine(to: CGPoint(x: 0, y: layerY + 25))
+            pinePath.addLine(to: CGPoint(x: layerSize, y: layerY))
+            pinePath.closeSubpath()
+
+            let pine = SKShapeNode(path: pinePath)
+            pine.fillColor = pineColor
+            pine.strokeColor = SKColor(red: 0.15, green: 0.25, blue: 0.18, alpha: 1.0)
+            pine.lineWidth = 1
+            tree.addChild(pine)
+
+            // Snow on top
+            let snowPath = CGMutablePath()
+            snowPath.move(to: CGPoint(x: -layerSize * 0.7, y: layerY + 15))
+            snowPath.addLine(to: CGPoint(x: 0, y: layerY + 25))
+            snowPath.addLine(to: CGPoint(x: layerSize * 0.7, y: layerY + 15))
+            snowPath.closeSubpath()
+
+            let snow = SKShapeNode(path: snowPath)
+            snow.fillColor = snowColor
+            snow.strokeColor = .clear
+            tree.addChild(snow)
+        }
+
+        // Shadow
+        let shadow = SKShapeNode(ellipseOf: CGSize(width: 40, height: 15))
+        shadow.fillColor = SKColor(red: 0.5, green: 0.55, blue: 0.6, alpha: 0.2)
+        shadow.strokeColor = .clear
+        shadow.position = CGPoint(x: 5, y: -5)
+        shadow.zPosition = -1
+        tree.addChild(shadow)
+
+        // Physics
+        let treeBody = SKPhysicsBody(circleOfRadius: trunkWidth * 1.5)
+        treeBody.isDynamic = false
+        treeBody.categoryBitMask = GameConfig.PhysicsCategory.boundary
+        treeBody.collisionBitMask = GameConfig.PhysicsCategory.player
+        treeBody.friction = 0
+        treeBody.restitution = 0
+        tree.physicsBody = treeBody
+
+        return tree
+    }
+
+    private func createSwampTree(at position: CGPoint) -> SKNode {
+        let tree = SKNode()
+        tree.position = position
+        tree.zPosition = GameConfig.ZPosition.enemy - 1
+
+        let trunkHeight: CGFloat = CGFloat(drand48()) * 20 + 35
+        let trunkWidth: CGFloat = CGFloat(drand48()) * 6 + 10
+
+        // Gnarled trunk
+        let trunk = SKShapeNode(rectOf: CGSize(width: trunkWidth, height: trunkHeight), cornerRadius: 2)
+        trunk.fillColor = SKColor(red: 0.25, green: 0.22, blue: 0.18, alpha: 1.0)
+        trunk.strokeColor = SKColor(red: 0.18, green: 0.15, blue: 0.12, alpha: 1.0)
+        trunk.lineWidth = 2
+        trunk.position = CGPoint(x: 0, y: trunkHeight / 2)
+        tree.addChild(trunk)
+
+        // Sparse, droopy foliage
+        let foliageColor = SKColor(red: 0.25, green: 0.35, blue: 0.22, alpha: 0.8)
+
+        for i in 0..<4 {
+            let foliage = SKShapeNode(ellipseOf: CGSize(width: 20 - CGFloat(i) * 3, height: 12))
+            foliage.fillColor = foliageColor
+            foliage.strokeColor = SKColor(red: 0.18, green: 0.28, blue: 0.15, alpha: 0.5)
+            foliage.lineWidth = 1
+            foliage.position = CGPoint(
+                x: CGFloat(drand48()) * 20 - 10,
+                y: trunkHeight + CGFloat(drand48()) * 15
+            )
+            tree.addChild(foliage)
+        }
+
+        // Hanging moss/vines
+        for _ in 0..<3 {
+            let vineLength = CGFloat(drand48()) * 20 + 10
+            let vine = SKShapeNode(rectOf: CGSize(width: 2, height: vineLength))
+            vine.fillColor = SKColor(red: 0.3, green: 0.38, blue: 0.28, alpha: 0.7)
+            vine.strokeColor = .clear
+            vine.position = CGPoint(
+                x: CGFloat(drand48()) * 30 - 15,
+                y: trunkHeight - vineLength / 2
+            )
+            tree.addChild(vine)
+        }
+
+        // Murky water puddle
+        let puddle = SKShapeNode(ellipseOf: CGSize(width: 30, height: 12))
+        puddle.fillColor = SKColor(red: 0.15, green: 0.2, blue: 0.15, alpha: 0.5)
+        puddle.strokeColor = .clear
+        puddle.position = CGPoint(x: 5, y: -5)
+        puddle.zPosition = -1
+        tree.addChild(puddle)
+
+        // Physics
+        let treeBody = SKPhysicsBody(circleOfRadius: trunkWidth * 1.5)
+        treeBody.isDynamic = false
+        treeBody.categoryBitMask = GameConfig.PhysicsCategory.boundary
+        treeBody.collisionBitMask = GameConfig.PhysicsCategory.player
+        treeBody.friction = 0
+        treeBody.restitution = 0
+        tree.physicsBody = treeBody
+
+        return tree
+    }
+
+    private func createRuinPillar(at position: CGPoint) -> SKNode {
+        let pillar = SKNode()
+        pillar.position = position
+        pillar.zPosition = GameConfig.ZPosition.enemy - 2
+
+        let pillarHeight: CGFloat = CGFloat(drand48()) * 30 + 25
+        let pillarWidth: CGFloat = CGFloat(drand48()) * 8 + 12
+
+        // Broken pillar
+        let pillarPath = CGMutablePath()
+        pillarPath.move(to: CGPoint(x: -pillarWidth / 2, y: 0))
+        pillarPath.addLine(to: CGPoint(x: -pillarWidth / 2 + 2, y: pillarHeight * 0.8))
+        pillarPath.addLine(to: CGPoint(x: -pillarWidth / 4, y: pillarHeight))
+        pillarPath.addLine(to: CGPoint(x: pillarWidth / 4, y: pillarHeight * 0.85))
+        pillarPath.addLine(to: CGPoint(x: pillarWidth / 2 - 2, y: pillarHeight * 0.9))
+        pillarPath.addLine(to: CGPoint(x: pillarWidth / 2, y: 0))
+        pillarPath.closeSubpath()
+
+        let stone = SKShapeNode(path: pillarPath)
+        stone.fillColor = SKColor(red: 0.5, green: 0.48, blue: 0.52, alpha: 1.0)
+        stone.strokeColor = SKColor(red: 0.35, green: 0.33, blue: 0.38, alpha: 1.0)
+        stone.lineWidth = 2
+        pillar.addChild(stone)
+
+        // Cracks
+        let crack = SKShapeNode(rectOf: CGSize(width: 1, height: pillarHeight * 0.4))
+        crack.fillColor = SKColor(red: 0.3, green: 0.28, blue: 0.32, alpha: 0.6)
+        crack.strokeColor = .clear
+        crack.position = CGPoint(x: CGFloat(drand48()) * pillarWidth * 0.5 - pillarWidth * 0.25, y: pillarHeight * 0.3)
+        crack.zRotation = CGFloat(drand48()) * 0.3 - 0.15
+        pillar.addChild(crack)
+
+        // Rubble around base
+        for _ in 0..<3 {
+            let rubbleSize = CGFloat(drand48()) * 5 + 3
+            let rubble = SKShapeNode(circleOfRadius: rubbleSize)
+            rubble.fillColor = SKColor(red: 0.45, green: 0.43, blue: 0.47, alpha: 0.8)
+            rubble.strokeColor = .clear
+            rubble.position = CGPoint(
+                x: CGFloat(drand48()) * pillarWidth * 1.5 - pillarWidth * 0.75,
+                y: CGFloat(drand48()) * 5 - 5
+            )
+            rubble.zPosition = -1
+            pillar.addChild(rubble)
+        }
+
+        // Shadow
+        let shadow = SKShapeNode(ellipseOf: CGSize(width: pillarWidth * 2, height: pillarWidth * 0.8))
+        shadow.fillColor = SKColor(red: 0, green: 0, blue: 0, alpha: 0.15)
+        shadow.strokeColor = .clear
+        shadow.position = CGPoint(x: 3, y: -3)
+        shadow.zPosition = -2
+        pillar.addChild(shadow)
+
+        // Physics
+        let pillarBody = SKPhysicsBody(circleOfRadius: pillarWidth)
+        pillarBody.isDynamic = false
+        pillarBody.categoryBitMask = GameConfig.PhysicsCategory.boundary
+        pillarBody.collisionBitMask = GameConfig.PhysicsCategory.player
+        pillarBody.friction = 0
+        pillarBody.restitution = 0
+        pillar.physicsBody = pillarBody
+
+        return pillar
     }
 
     private func setupPlayer() {

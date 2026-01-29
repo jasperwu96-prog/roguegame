@@ -1303,13 +1303,13 @@ class Enemy: SKNode {
         isActive = false
         physicsBody?.categoryBitMask = GameConfig.PhysicsCategory.none
 
-        // Remove ALL actions to prevent memory leaks from repeatForever animations
-        removeAllActions()
-
-        // Also remove actions from child nodes (boss particles, fuse sparks, etc.)
-        enumerateChildNodes(withName: "//*") { node, _ in
-            node.removeAllActions()
-        }
+        // Remove specific repeatForever action keys to prevent memory leaks
+        // Don't use removeAllActions() as it breaks the death animation
+        removeAction(forKey: "elitePulse")
+        removeAction(forKey: "shoot")
+        removeAction(forKey: "chargeWarning")
+        removeAction(forKey: "suicideFuse")
+        removeAction(forKey: "buffPulse")
 
         // Death animation - notify delegate, then remove from scene
         let deathAction = SKAction.sequence([

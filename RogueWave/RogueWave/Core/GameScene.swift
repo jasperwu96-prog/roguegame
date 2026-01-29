@@ -1197,13 +1197,13 @@ extension GameScene: PlayerDelegate {
     func playerDidLevelUp(newLevel: Int) {
         uiManager.updateXP(current: player.stats.currentXP, max: player.stats.xpToNextLevel, level: newLevel)
 
-        // Level up effect
+        // Level up effect - add to camera so it stays on screen
         let flash = SKShapeNode(rectOf: size)
         flash.fillColor = SKColor.white.withAlphaComponent(0.3)
         flash.strokeColor = .clear
-        flash.position = CGPoint(x: size.width / 2, y: size.height / 2)
-        flash.zPosition = GameConfig.ZPosition.effects
-        addChild(flash)
+        flash.position = .zero  // Center of camera
+        flash.zPosition = GameConfig.ZPosition.overlay - 1
+        gameCamera.addChild(flash)
 
         flash.run(SKAction.sequence([
             SKAction.fadeOut(withDuration: 0.3),
@@ -1287,8 +1287,8 @@ extension GameScene: WaveManagerDelegate {
 
     private func showWaveNotification(wave: Int, modifiers: [WaveModifier], isBoss: Bool) {
         let notification = SKNode()
-        notification.position = CGPoint(x: size.width / 2, y: size.height / 2)
-        notification.zPosition = GameConfig.ZPosition.effects
+        notification.position = CGPoint(x: 0, y: 100)  // Centered above middle of screen
+        notification.zPosition = GameConfig.ZPosition.overlay
 
         // Wave text
         let waveText = SKLabelNode(fontNamed: UIConfig.fontName)
@@ -1307,7 +1307,8 @@ extension GameScene: WaveManagerDelegate {
             notification.addChild(modifierText)
         }
 
-        addChild(notification)
+        // Add to camera so it stays on screen
+        gameCamera.addChild(notification)
 
         // Animate
         notification.setScale(0.5)
